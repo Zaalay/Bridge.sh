@@ -1,26 +1,24 @@
-#TODO: make a better logging
-
-app::run() {
+app::cache() {
 
 }
 
-app::run_in_background() {
+app::get_file() {
+  readlink -m "${0}"
+}
+
+app::get_dir() {
+  dirname "$(app::get_file)"
+}
+
+app::get_lib_dir() {
+  dirname "$(readlink -m "${BASH_SOURCE[0]:-$0}")"
+}
+
+app::get_shell() {
 
 }
 
-app::wait_background_processes() {
-
-}
-
-app::is_running() {
-
-}
-
-app::run_if_exist() {
-
-}
-
-app::run_as_root() {
+app::init() {
 
 }
 

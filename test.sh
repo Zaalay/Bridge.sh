@@ -1,1 +1,2 @@
-echo $BASH_SOURCE haha
+clear
+env

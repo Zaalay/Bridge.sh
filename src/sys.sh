@@ -13,8 +13,3 @@ sys::is_kernel() {
 sys::is_distro() {
   [[ "$(cat '/etc/os-release' | awk -F '=' '/ID/{print $2}')" =~ "${1}" ]]
 }
-
-sys::has_command() {
-  command -v "$1" &> /dev/null
-}
-
