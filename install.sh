@@ -24,24 +24,36 @@
 
 set -euo pipefail
 
+###################### DATA ##############################
+
 BRIDGESH_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 BRIDGESH_BINDIR="$(dirname "$(type -P dirname)")"
-BRIDGESH_SRCDIR="https://raw.githubusercontent.com/Zaalay/Bridge.sh/stable/modules"
+BRIDGESH_SRCDIR="https://raw.githubusercontent.com/Zaalay/Bridge.sh/alpha/modules"
 BRIDGESH_DIR="${HOME}/.Bridge.sh"
 BRIDGESH_RCFILE="${HOME}/.bridgeshrc"
-BRIDGESH_RCSTR=". \"\${HOME}/.bridgeshrc\""
 BASH_RCFILE="${HOME}/.bashrc"
 
-bridgesh_core_sh_sum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+BRIDGESH_RCSTR="\"\${HOME}/.bridgeshrc\""
+BRIDGESH_DIRSTR="\"\${HOME}/.Bridge.sh\""
+BRIDGESH_DIRSTRSTR="\"\${BRIDGESH_DIR}\""
+
+bridgesh_core_sh_sum="c30c703624873efbeecce7799c9cfa7eaf8cd1e27d0b9221e7fcf9a4543af1b1"
 bridgesh_bsd_sh_sum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 bridgesh_linux_sh_sum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 bridgesh_macos_sh_sum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+bridgesh_defaults="BRIDGESH_BINDIR=${BRIDGESH_BINDIR}\n"
+bridgesh_defaults+="BRIDGESH_DIR=${BRIDGESH_DIRSTR}\n\n"
+bridgesh_defaults+=". ${BRIDGESH_DIRSTRSTR}/core.sh\n"
+bridgesh_defaults+=". ${BRIDGESH_DIRSTRSTR}/os.sh"
+
+###################### UTILITIES ##############################
 
 bridgesh::dlcheck() {
   local var_name="bridgesh_${1}_sh_sum"
   local target_name=""
   
-  [[ $# -eq 2 ]] && target_name="${2}" || target_name="${1}"
+  [[ $# -ge 2 ]] && target_name="${2}" || target_name="${1}"
 
   if [[ "$(curl -sS "${BRIDGESH_SRCDIR}/${1}.sh" |
       tee "${BRIDGESH_DIR}/${target_name}.sh" | sha256sum |
@@ -53,6 +65,16 @@ bridgesh::dlcheck() {
     exit 1
   fi
 }
+
+bridgesh::rcappend() {
+  ! grep -q "${1}" "${2}" && echo -e "\n${1}" >> "${2}"
+}
+
+bridgesh::rcwrite() {
+  echo -e "${1}" > "${2}"
+}
+
+###################### INSTALATION ##############################\
 
 case "${BRIDGESH_OS}" in
   *bsd)
@@ -68,10 +90,5 @@ mkdir -p "${BRIDGESH_DIR}"
 bridgesh::dlcheck core
 bridgesh::dlcheck "${BRIDGESH_OS}" os
 
-echo "BRIDGESH_BINDIR=${BRIDGESH_BINDIR}" > "${BRIDGESH_RCFILE}"
-
-if ! grep -q "${BRIDGESH_RCSTR}" "${BASH_RCFILE}"; then
-  echo -e "\n${BRIDGESH_RCSTR}" >> "${BASH_RCFILE}"
-fi
-
-
+bridgesh::rcwrite "${bridgesh_defaults}" "${BRIDGESH_RCFILE}"
+bridgesh::rcappend ". ${BRIDGESH_RCSTR}" "${BASH_RCFILE}"
