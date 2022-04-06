@@ -3,5 +3,9 @@ create-bridge-app() {
 }
 
 bridgesh-update() {
-  echo "Under development..."
+  curl -sS https://raw.githubusercontent.com/Zaalay/Bridge.sh/alpha/install.sh | bash
+}
+
+bridgesh-uninstall() {
+  "${BRIDGESH_DIR}/uninstall.sh"
 }

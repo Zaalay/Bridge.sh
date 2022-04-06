@@ -63,7 +63,7 @@ bridgesh::rcwrite() {
 
 ###################### INSTALATION ##############################
 
-if [[ ${0} == "uninstall.sh" ]]; then
+if [[ "$(basename ${0})" == "uninstall.sh" ]]; then
   rm -rf "${BRIDGESH_DIR}"
   rm -rf "${BRIDGESH_RCFILE}"
   bridgesh::rctakeaway ". ${BRIDGESH_RCSTR}" "${BASH_RCFILE}"
