@@ -27,6 +27,7 @@ set -euo pipefail
 ###################### DATA ##############################
 
 BRIDGESH_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+[[ BRIDGESH_OS == *bsd ]] && BRIDGESH_OS="bsd"
 BRIDGESH_BINDIR="$(dirname "$(type -P dirname)")"
 BRIDGESH_SRCDIR="https://raw.githubusercontent.com/Zaalay/Bridge.sh/alpha/modules"
 BRIDGESH_DIR="${HOME}/.Bridge.sh"
@@ -35,60 +36,54 @@ BASH_RCFILE="${HOME}/.bashrc"
 
 BRIDGESH_RCSTR="\"\${HOME}/.bridgeshrc\""
 BRIDGESH_DIRSTR="\"\${HOME}/.Bridge.sh\""
-BRIDGESH_DIRSTRSTR="\"\${BRIDGESH_DIR}\""
 
-bridgesh_core_sh_sum="c30c703624873efbeecce7799c9cfa7eaf8cd1e27d0b9221e7fcf9a4543af1b1"
-bridgesh_bsd_sh_sum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-bridgesh_linux_sh_sum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-bridgesh_macos_sh_sum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+BRIDGESH_DIRRAW="\"\${BRIDGESH_DIR}\""
+BRIDGESH_OSRAW="\"\${BRIDGESH_OS}\""
 
 bridgesh_defaults="BRIDGESH_BINDIR=${BRIDGESH_BINDIR}\n"
-bridgesh_defaults+="BRIDGESH_DIR=${BRIDGESH_DIRSTR}\n\n"
-bridgesh_defaults+=". ${BRIDGESH_DIRSTRSTR}/core.sh\n"
-bridgesh_defaults+=". ${BRIDGESH_DIRSTRSTR}/os.sh"
+bridgesh_defaults+="BRIDGESH_DIR=${BRIDGESH_DIRSTR}\n"
+bridgesh_defaults+="BRIDGESH_OS=${BRIDGESH_OS}\n\n"
+bridgesh_defaults+=". ${BRIDGESH_DIRRAW}/modules/core.sh\n"
+bridgesh_defaults+=". ${BRIDGESH_DIRRAW}/modules/${BRIDGESH_OSRAW}.sh"
 
 ###################### UTILITIES ##############################
 
-bridgesh::dlcheck() {
-  local var_name="bridgesh_${1}_sh_sum"
-  local target_name=""
-  
-  [[ $# -ge 2 ]] && target_name="${2}" || target_name="${1}"
-
-  if [[ "$(curl -sS "${BRIDGESH_SRCDIR}/${1}.sh" |
-      tee "${BRIDGESH_DIR}/${target_name}.sh" | sha256sum |
-      cut -d " " -f1)" == "${!var_name}" ]]; then
-    echo "${1}.sh has been downloaded"
-  else
-    echo "Failed to download ${1}.sh"
-    rm "${BRIDGESH_DIR}/${target_name}.sh"
-    exit 1
-  fi
-}
-
 bridgesh::rcappend() {
   ! grep -q "${1}" "${2}" && echo -e "\n${1}" >> "${2}"
+}
+
+bridgesh::rctakeaway() {
+  grep -qv "${1}" "${2}" > "${2}.bak"
+  mv -f "${2}"{".bak",""}
 }
 
 bridgesh::rcwrite() {
   echo -e "${1}" > "${2}"
 }
 
-###################### INSTALATION ##############################\
+###################### INSTALATION ##############################
 
-case "${BRIDGESH_OS}" in
-  *bsd)
-    BRIDGESH_OS="bsd" ;;
-  linux|darwin)
-    ;;
-  *)
+if [[ ${0} == "uninstall.sh" ]]; then
+  rm -rf "${BRIDGESH_DIR}"
+  rm -rf "${BRIDGESH_RCFILE}"
+  bridgesh::rctakeaway ". ${BRIDGESH_RCSTR}" "${BASH_RCFILE}"
+  
+  echo "Bridge.sh has been uninstalled"
+else
+  [[ -f "${BRIDGESH_DIR}/uninstall.sh" ]] && "${BRIDGESH_DIR}/uninstall.sh"
+
+  if ! [[ "${BRIDGESH_OS}" =~ ^(bsd|linux|darwin)$ ]]; then
     echo "Sorry, this platform is not (yet) supported"
-    exit 1 ;;
-esac
+    exit 1
+  fi
 
-mkdir -p "${BRIDGESH_DIR}"
-bridgesh::dlcheck core
-bridgesh::dlcheck "${BRIDGESH_OS}" os
+  mkdir -p "${BRIDGESH_DIR}"
+  curl -L https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha |
+    tar -xz -C "${BRIDGESH_DIR}" --strip-components 1 --exclude ".gitignore"
+  mv "${BRIDGESH_DIR}/"{"install.sh","uninstall.sh"}
 
-bridgesh::rcwrite "${bridgesh_defaults}" "${BRIDGESH_RCFILE}"
-bridgesh::rcappend ". ${BRIDGESH_RCSTR}" "${BASH_RCFILE}"
+  bridgesh::rcwrite "${bridgesh_defaults}" "${BRIDGESH_RCFILE}"
+  bridgesh::rcappend ". ${BRIDGESH_RCSTR}" "${BASH_RCFILE}"
+  
+  echo "Bridge.sh has been installed"
+fi
