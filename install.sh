@@ -26,25 +26,19 @@ set -euo pipefail
 
 ###################### DATA ##############################
 
-BRIDGESH_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-[[ BRIDGESH_OS == *bsd ]] && BRIDGESH_OS="bsd"
-BRIDGESH_BINDIR="$(dirname "$(type -P dirname)")"
-BRIDGESH_SRCDIR="https://raw.githubusercontent.com/Zaalay/Bridge.sh/alpha/modules"
-BRIDGESH_DIR="${HOME}/.Bridge.sh"
-BRIDGESH_RCFILE="${HOME}/.bridgeshrc"
-BASH_RCFILE="${HOME}/.bashrc"
+test=false
+[[ $# -ge 1 && "${1}" == "-t" ]] && test=true
+os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+[[ os == *bsd ]] && os="bsd"
 
-BRIDGESH_RCSTR="\"\${HOME}/.bridgeshrc\""
-BRIDGESH_DIRSTR="\"\${HOME}/.Bridge.sh\""
+src="https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha"
+bindir="$(dirname "$(type -P dirname)")"
+dir="${HOME}/.Bridge.sh"
+rcfile="${HOME}/.bridgeshrc"
+bash_rcfile="${HOME}/.bashrc"
 
-BRIDGESH_DIRRAW="\"\${BRIDGESH_DIR}\""
-BRIDGESH_OSRAW="\"\${BRIDGESH_OS}\""
-
-bridgesh_defaults="BRIDGESH_BINDIR=${BRIDGESH_BINDIR}\n"
-bridgesh_defaults+="BRIDGESH_DIR=${BRIDGESH_DIRSTR}\n"
-bridgesh_defaults+="BRIDGESH_OS=${BRIDGESH_OS}\n\n"
-bridgesh_defaults+=". ${BRIDGESH_DIRRAW}/modules/core.sh\n"
-bridgesh_defaults+=". ${BRIDGESH_DIRRAW}/modules/${BRIDGESH_OSRAW}.sh"
+rcfilestr="BRIDGESH_BINDIR=${bindir}\nBRIDGESH_OS=${os}"
+bash_rcfilestr='. "${HOME}/.bridgeshrc"'
 
 ###################### UTILITIES ##############################
 
@@ -53,8 +47,8 @@ bridgesh::rcappend() {
 }
 
 bridgesh::rctakeaway() {
-  grep -v "${1}" "${2}" > "${2}.bak"
-  mv -f "${2}"{".bak",""}
+  # echo is intended for inplace replace
+  echo "$(grep -v "${1}" "${2}")" > "${2}"
 }
 
 bridgesh::rcwrite() {
@@ -66,29 +60,36 @@ bridgesh::rcwrite() {
 if [[ "$(basename ${0})" == "uninstall.sh" ]]; then
   echo "Uninstalling Bridge.sh..."
 
-  rm -rf "${BRIDGESH_DIR}"
-  rm -rf "${BRIDGESH_RCFILE}"
-  bridgesh::rctakeaway "\n. ${BRIDGESH_RCSTR}" "${BASH_RCFILE}"
+  rm -rf "${dir}"
+  rm -rf "${rcfile}"
+  bridgesh::rctakeaway "${bash_rcfilestr}" "${bash_rcfile}"
   
   echo "Bridge.sh has been uninstalled"
 else
-  [[ -f "${BRIDGESH_DIR}/uninstall.sh" ]] && "${BRIDGESH_DIR}/uninstall.sh"
+  [[ -f "${dir}/uninstall.sh" ]] && "${dir}/uninstall.sh"
 
   echo "Installing Bridge.sh..."
 
-  if ! [[ "${BRIDGESH_OS}" =~ ^(bsd|linux|darwin)$ ]]; then
+  if ! [[ "${os}" =~ ^(bsd|linux|darwin)$ ]]; then
     echo "Sorry, this platform is not (yet) supported"
     exit 1
   fi
 
-  mkdir -p "${BRIDGESH_DIR}"
+  mkdir -p "${dir}"
 
-  curl -sSL https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha |
-    tar -xz -C "${BRIDGESH_DIR}" --strip-components 1 --exclude ".gitignore"
-  mv "${BRIDGESH_DIR}/"{"install.sh","uninstall.sh"}
+  if ${test}; then
+    tar -c --exclude ".git" --exclude ".gitignore" . |
+      tar -x -C "${dir}"
+  else
+    curl -sSL "${src}" |
+      tar -xz -C "${dir}" --strip-components 1 --exclude ".gitignore"
+  fi
+  
+  mv "${dir}/"{"install.sh","uninstall.sh"}
 
-  bridgesh::rcwrite "${bridgesh_defaults}" "${BRIDGESH_RCFILE}"
-  bridgesh::rcappend ". ${BRIDGESH_RCSTR}" "${BASH_RCFILE}"
+  bridgesh::rcwrite "${rcfilestr}" "${rcfile}"
+  bridgesh::rcappend "${bash_rcfilestr}" "${bash_rcfile}"
+  cat "${dir}/templates/rc.sh" >> "${rcfile}"
   
   echo "Bridge.sh has been installed"
 fi
