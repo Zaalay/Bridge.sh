@@ -42,16 +42,17 @@ bash_rcfilestr='. "${HOME}/.bridgeshrc"'
 
 ###################### UTILITIES ##############################
 
-bridgesh::rcappend() {
+rcappend() {
+  [[ -f "${2}" ]] || touch "${2}"
   grep -q "${1}" "${2}" || echo -e "\n${1}" >> "${2}"
 }
 
-bridgesh::rctakeaway() {
+rctakeaway() {
   # echo is intended for inplace replace
-  echo "$(grep -v "${1}" "${2}")" > "${2}"
+  [[ -f "${2}" ]] && echo "$(grep -v "${1}" "${2}")" > "${2}"
 }
 
-bridgesh::rcwrite() {
+rcwrite() {
   echo -e "${1}" > "${2}"
 }
 
@@ -62,8 +63,8 @@ if [[ "$(basename ${0})" == "uninstall.sh" ]]; then
 
   rm -rf "${dir}"
   rm -rf "${rcfile}"
-  bridgesh::rctakeaway "${bash_rcfilestr}" "${bash_rcfile}"
-  
+  rctakeaway "${bash_rcfilestr}" "${bash_rcfile}"
+
   echo "Bridge.sh has been uninstalled"
 else
   [[ -f "${dir}/uninstall.sh" ]] && "${dir}/uninstall.sh"
@@ -79,17 +80,17 @@ else
 
   if ${test}; then
     tar -c --exclude ".git" --exclude ".gitignore" . |
-      tar -x -C "${dir}"
+    tar -x -C "${dir}"
   else
     curl -sSL "${src}" |
-      tar -xz -C "${dir}" --strip-components 1 --exclude ".gitignore"
+    tar -xz -C "${dir}" --strip-components 1 --exclude ".gitignore"
   fi
-  
+
   mv "${dir}/"{"install.sh","uninstall.sh"}
 
-  bridgesh::rcwrite "${rcfilestr}" "${rcfile}"
-  bridgesh::rcappend "${bash_rcfilestr}" "${bash_rcfile}"
+  rcwrite "${rcfilestr}" "${rcfile}"
+  rcappend "${bash_rcfilestr}" "${bash_rcfile}"
   cat "${dir}/templates/rc.sh" >> "${rcfile}"
-  
+
   echo "Bridge.sh has been installed"
 fi
