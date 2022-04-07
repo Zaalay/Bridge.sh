@@ -32,6 +32,8 @@ os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 [[ os == *bsd ]] && os="bsd"
 
 src="https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha"
+testsrc="$(dirname "${0}")"
+[[ $# -ge 2 ]] && testsrc="${2}"
 bindir="$(dirname "$(type -P dirname)")"
 dir="${HOME}/.Bridge.sh"
 rcfile="${HOME}/.bridgeshrc"
@@ -54,6 +56,34 @@ rctakeaway() {
 
 rcwrite() {
   echo -e "${1}" > "${2}"
+}
+
+webscrap() {
+  local dest="."
+  [[ $# -ge 2 ]] && dest="${2}"
+
+  (
+    cd "${dest}"
+
+    for item in $(curl -s "${1}" | grep href | sed 's/.*href="//' |
+      sed 's/".*//' | grep '^[a-zA-Z].*'); do
+      if [[ "${item: -1}" == "/" ]]; then
+        mkdir -p "${item}"
+
+        (
+          cd "${item}"
+          webscrap "${1}"/"${item}"
+        )
+      else
+        curl -sS -O "${1}"/"${item}"
+
+        # can't do short circuit in subshells, use "if" instead...
+        if [[ "${item}" =~ ^(install.sh|app.sh)$ ]]; then
+          chmod +x "${item}"
+        fi
+      fi
+    done
+  )
 }
 
 ###################### INSTALATION ##############################
@@ -79,8 +109,16 @@ else
   mkdir -p "${dir}"
 
   if ${test}; then
-    tar -c --exclude ".git" --exclude ".gitignore" . |
-    tar -x -C "${dir}"
+    if [[ "${testsrc}" == http*://* ]]; then
+      webscrap "${testsrc}" "${dir}"
+    else
+      (
+        cd "${testsrc}"
+
+        tar -c --exclude ".git" --exclude ".gitignore" . |
+        tar -x -C "${dir}"
+      )
+    fi
   else
     curl -sSL "${src}" |
     tar -xz -C "${dir}" --strip-components 1 --exclude ".gitignore"
