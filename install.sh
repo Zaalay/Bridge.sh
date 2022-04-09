@@ -127,7 +127,7 @@ webscrap() {
       (contain "$(pathify "${item}")" "${exclude[@]}") && continue
 
       if [[ "${item: -1}" == "/" ]]; then
-        mkdir -p "${item}"
+        mkdir -p "$(urldecode "${item}")"
 
         (
           cd "${item}"
@@ -170,7 +170,7 @@ else
       (cd "${testsrc}"; tar -c ${ignorelist[@]} . | tar -x -C "${dir}")
     fi
   else
-    curl -sSL "${src}" | tar -xz -C "${dir}" --strip-components 1 "${ignorelist[@]}"
+    curl -sSL "${src}" | tar -xz -C "${dir}" --strip-components 1 ${ignorelist[@]}
   fi
 
   mv "${dir}/"{"install.sh","uninstall.sh"}
