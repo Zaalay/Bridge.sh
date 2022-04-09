@@ -23,6 +23,7 @@
 # SOFTWARE.
 
 set -euo pipefail
+shopt -s expand_aliases
 
 ###################### DATA ##############################
 
@@ -38,6 +39,9 @@ bindir="$(dirname "$(type -P dirname)")"
 dir="${HOME}/.Bridge.sh"
 rcfile="${HOME}/.bridgeshrc"
 bash_rcfile="${HOME}/.bashrc"
+# This makes we can't use spaces in our project structure
+ignorelist=("--exclude "{".git",".gitignore","gitty.sh"})
+executablelist=("${dir}/"{"install.sh","templates/app.sh"})
 
 rcfilestr="BRIDGESH_BINDIR=${bindir}\nBRIDGESH_OS=${os}"
 bash_rcfilestr='. "${HOME}/.bridgeshrc"'
@@ -58,29 +62,79 @@ rcwrite() {
   echo -e "${1}" > "${2}"
 }
 
+urldecode() {
+  echo -e "$(echo "${1}" | sed 's/+/ /g;s/%\(..\)/\\x\1/g;')"
+}
+
+pathify() {
+  echo "${1}" | sed 's:/*$::'
+}
+
+contain() {
+  for item in ${@:2}; do
+    [[ "${1}" == "${item}" ]] && return 0
+  done
+
+  return 1
+}
+
+alias novalue='echo "${1} needs value"; exit 1'
+alias invalidparam='echo "${1} is not a valid parameter"; exit 1'
+alias nextparam='shift'
+alias chkvalue='{
+  if [[ $# -ge 2 ]]; then
+    if [[ "${2:1:1}" != "-" ]]; then
+      __lastvalue__="${2}"; nextparam
+    else
+      novalue
+    fi
+  else
+    novalue
+  fi
+}'
+
 webscrap() {
+  local exclude=()
+  local src=""
   local dest="."
-  [[ $# -ge 2 ]] && dest="${2}"
+
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+      --exclude)
+        chkvalue; exclude+=("$(pathify "${__lastvalue__}")") ;;
+      -*)
+        invalidparam ;;
+      *)
+        if [[ "${src}" == "" ]]; then
+          src="${1}"
+        elif [[ "${dest}" == "." ]]; then
+          dest="${1}"
+        fi
+        ;;
+    esac
+
+    nextparam
+  done
+
+  # Can't do short circuit here, use "if" instead
+  if [[ "${src}" == "" ]]; then echo "No source?"; exit 1; fi
 
   (
     cd "${dest}"
 
-    for item in $(curl -s "${1}" | grep href | sed 's/.*href="//' |
-      sed 's/".*//' | grep '^[a-zA-Z].*'); do
+    for item in $(curl -s "${src}" | grep href | sed 's/.*href="//' |
+      sed 's/".*//'); do
+      (contain "$(pathify "${item}")" "${exclude[@]}") && continue
+
       if [[ "${item: -1}" == "/" ]]; then
         mkdir -p "${item}"
 
         (
           cd "${item}"
-          webscrap "${1}"/"${item}"
+          webscrap "${src}/${item}" "${dest}/${item}"
         )
       else
-        curl -sS -O "${1}"/"${item}"
-
-        # can't do short circuit in subshells, use "if" instead...
-        if [[ "${item}" =~ ^(install.sh|app.sh)$ ]]; then
-          chmod +x "${item}"
-        fi
+        curl -sS "${src}/${item}" -o "$(urldecode "${item}")"
       fi
     done
   )
@@ -110,18 +164,13 @@ else
 
   if ${test}; then
     if [[ "${testsrc}" == http*://* ]]; then
-      webscrap "${testsrc}" "${dir}"
+      webscrap "${testsrc}" ${ignorelist[@]} "${dir}"
+      chmod +x "${executablelist[@]}"
     else
-      (
-        cd "${testsrc}"
-
-        tar -c --exclude ".git" --exclude ".gitignore" . |
-        tar -x -C "${dir}"
-      )
+      (cd "${testsrc}"; tar -c ${ignorelist[@]} . | tar -x -C "${dir}")
     fi
   else
-    curl -sSL "${src}" |
-    tar -xz -C "${dir}" --strip-components 1 --exclude ".gitignore"
+    curl -sSL "${src}" | tar -xz -C "${dir}" --strip-components 1 "${ignorelist[@]}"
   fi
 
   mv "${dir}/"{"install.sh","uninstall.sh"}
