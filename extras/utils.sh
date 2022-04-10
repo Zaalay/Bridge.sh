@@ -1,3 +1,8 @@
+# Part of Bridge.sh, MIT-licensed
+# Copyright (c) 2022 Zaalay Studio, Muhammad Rivan
+#
+# Don't use any 'exit' here as this file is sourced, not directly executed 
+
 create-bridge-app() {
   mkdir -p "${1}/"{"bridge_modules","src","data"}
 
@@ -11,5 +16,10 @@ bridgesh-update() {
 }
 
 bridgesh-uninstall() {
-  "${BRIDGESH_DIR}/uninstall.sh"
+  if [[ -f "${BRIDGESH_DIR}/uninstall.sh" ]]; then
+    "${BRIDGESH_DIR}/uninstall.sh"
+  else
+    echo "No Bridge.sh installation found"
+    return 1
+  fi
 }

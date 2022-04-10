@@ -1,7 +1,9 @@
 #! /usr/bin/env bash
-#
+# Part of Bridge.sh, MIT-licensed
+# Copyright (c) 2022 Zaalay Studio, Muhammad Rivan
+# ============================
 # Clean ignored files
-#
+# ============================
 
 git clean -d -f -X
 git add .

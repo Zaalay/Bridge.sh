@@ -11,18 +11,18 @@ and boom! You got it installed! :D
 ## How to debug
 Well, you can just clone this repo, enter the directory, and run
 ```
+./install.sh -t
+```
+
+### Wanna test it on local network as well?
+Just run
+```
 python3 -m http.server
 ```
 And then you can run this command on any UNIX devices in the same network
-as yours
+as yours. BTW, you might need to open a new terminal
 ```
 curl -sS http://YOUR-SERVER-IP:8000/install.sh | bash -s -- -t http://YOUR-SERVER-IP:8000
 ```
 Don't forget to replace "YOUR-SERVER-IP" with your literal IP!
 
-
-### Just wanna test it locally?
-Then you can simply run
-```
-./install.sh -t
-```

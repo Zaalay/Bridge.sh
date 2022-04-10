@@ -1,26 +1,6 @@
 #!/usr/bin/env bash
-#
-# MIT License
-#
+# Part of Bridge.sh, MIT-licensed
 # Copyright (c) 2022 Zaalay Studio, Muhammad Rivan
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
 
 set -euo pipefail
 shopt -s expand_aliases
@@ -42,6 +22,7 @@ dir="${HOME}/.Bridge.sh"
 tmpdir="${HOME}/.Bridge.sh.bak"
 rcfile="${HOME}/.bridgeshrc"
 bash_rcfile="${HOME}/.bashrc"
+scriptname="$(basename ${0})"
 # This makes we can't use spaces in our project structure
 ignorelist=("--exclude "{".git",".gitignore","gitty.sh"})
 executablelist=("${tmpdir}/"{"install.sh","templates/app.sh"})
@@ -145,7 +126,7 @@ webscrap() {
 
 ###################### INSTALATION ##############################
 
-if [[ "$(basename ${0})" == "uninstall.sh" ]]; then
+if [[ "${scriptname}" == "uninstall.sh" ]]; then
   if ${upgrade}; then
     echo "Removing old Bridge.sh installation..."
   else
