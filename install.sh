@@ -29,6 +29,8 @@ shopt -s expand_aliases
 
 test=false
 [[ $# -ge 1 && "${1}" == "-t" ]] && test=true
+upgrade=false
+[[ $# -ge 1 && "${1}" == "-u" ]] && upgrade=true
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 [[ os == *bsd ]] && os="bsd"
 
@@ -37,11 +39,12 @@ testsrc="$(dirname "${0}")"
 [[ $# -ge 2 ]] && testsrc="${2}"
 bindir="$(dirname "$(type -P dirname)")"
 dir="${HOME}/.Bridge.sh"
+tmpdir="${HOME}/.Bridge.sh.bak"
 rcfile="${HOME}/.bridgeshrc"
 bash_rcfile="${HOME}/.bashrc"
 # This makes we can't use spaces in our project structure
 ignorelist=("--exclude "{".git",".gitignore","gitty.sh"})
-executablelist=("${dir}/"{"install.sh","templates/app.sh"})
+executablelist=("${tmpdir}/"{"install.sh","templates/app.sh"})
 
 rcfilestr="BRIDGESH_BINDIR=${bindir}\nBRIDGESH_OS=${os}"
 bash_rcfilestr='. "${HOME}/.bridgeshrc"'
@@ -143,16 +146,18 @@ webscrap() {
 ###################### INSTALATION ##############################
 
 if [[ "$(basename ${0})" == "uninstall.sh" ]]; then
-  echo "Uninstalling Bridge.sh..."
+  if ${upgrade}; then
+    echo "Removing old Bridge.sh installation..."
+  else
+    echo "Uninstalling Bridge.sh..."
+  fi
 
   rm -rf "${dir}"
   rm -rf "${rcfile}"
   rctakeaway "${bash_rcfilestr}" "${bash_rcfile}"
 
-  echo "Bridge.sh has been uninstalled"
+  ${upgrade} || echo "Bridge.sh has been uninstalled"
 else
-  [[ -f "${dir}/uninstall.sh" ]] && "${dir}/uninstall.sh"
-
   echo "Installing Bridge.sh..."
 
   if ! [[ "${os}" =~ ^(bsd|linux|darwin)$ ]]; then
@@ -160,24 +165,29 @@ else
     exit 1
   fi
 
-  mkdir -p "${dir}"
+  rm -rf "${tmpdir}"
+  mkdir -p "${tmpdir}"
 
   if ${test}; then
     if [[ "${testsrc}" == http*://* ]]; then
-      webscrap "${testsrc}" ${ignorelist[@]} "${dir}"
+      webscrap "${testsrc}" ${ignorelist[@]} "${tmpdir}"
       chmod +x "${executablelist[@]}"
     else
-      (cd "${testsrc}"; tar -c ${ignorelist[@]} . | tar -x -C "${dir}")
+      (cd "${testsrc}"; tar -c ${ignorelist[@]} . | tar -x -C "${tmpdir}")
     fi
   else
-    curl -sSL "${src}" | tar -xz -C "${dir}" --strip-components 1 ${ignorelist[@]}
+    curl -sSL "${src}" |
+    tar -xz -C "${tmpdir}" --strip-components 1 ${ignorelist[@]}
   fi
 
-  mv "${dir}/"{"install.sh","uninstall.sh"}
+  [[ -f "${dir}/uninstall.sh" ]] && "${dir}/uninstall.sh" -u
 
   rcwrite "${rcfilestr}" "${rcfile}"
   rcappend "${bash_rcfilestr}" "${bash_rcfile}"
-  cat "${dir}/templates/rc.sh" >> "${rcfile}"
+  cat "${tmpdir}/templates/rc.sh" >> "${rcfile}"
+
+  mv "${tmpdir}/"{"install.sh","uninstall.sh"}
+  mv "${tmpdir}" "${dir}"
 
   echo "Bridge.sh has been installed"
 fi
