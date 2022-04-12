@@ -10,6 +10,8 @@ git add .
 
 ! command -v beautysh && sudo pip install beautysh
 beautysh -i 2 -s paronly *.sh
+beautysh -i 2 -s paronly modules/*.sh
+beautysh -i 2 -s paronly templates/*.sh
 
 git add .
 git commit -am "${1}"

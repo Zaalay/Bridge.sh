@@ -8,6 +8,24 @@ curl -sS https://raw.githubusercontent.com/Zaalay/Bridge.sh/alpha/install.sh | b
 ```
 and boom! You got it installed! :D
 
+## How to upgrade
+You can either run
+```
+bridgesh-upgrade
+```
+or
+```
+bridgesh-update
+```
+Yeah, they're the same things
+
+## How to uninstall
+Just run
+```
+bridgesh-uninstall
+```
+And... goodbye...
+
 ## How to debug
 Well, you can just clone this repo, enter the directory, and run
 ```
@@ -25,4 +43,3 @@ as yours. BTW, you might need to open a new terminal
 curl -sS http://YOUR-SERVER-IP:8000/install.sh | bash -s -- -t http://YOUR-SERVER-IP:8000
 ```
 Don't forget to replace "YOUR-SERVER-IP" with your literal IP!
-
