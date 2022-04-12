@@ -191,4 +191,5 @@ else
   mv "${tmpdir}" "${dir}"
 
   echo "Bridge.sh has been installed"
+  echo "You need to reopen this terminal to take effect"
 fi
