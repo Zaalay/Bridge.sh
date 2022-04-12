@@ -183,7 +183,7 @@ else
     cd "${tmpdir}"
 
     for util in ${utillist[@]}; do
-      ln -s "../utils.sh" "${util}" 
+      ln -s "../utils.sh" "${util}"
     done
   )
 
