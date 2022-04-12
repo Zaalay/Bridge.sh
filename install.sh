@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Part of Bridge.sh, MIT-licensed
 # Copyright (c) 2022 Zaalay Studio, Muhammad Rivan
+#
+# Use "[[ ... ]] && ..." or "[[ ... ]] || ..." only for one condition
+# Otherwise, it will cause disasters like "is_file_exist &&
+# does_file_contain_this || write_that" where "write_that" is always
+# executed
 
 set -euo pipefail
 shopt -s expand_aliases
@@ -22,19 +27,24 @@ dir="${HOME}/.Bridge.sh"
 tmpdir="${HOME}/.Bridge.sh.bak"
 rcfile="${HOME}/.bridgeshrc"
 bash_rcfile="${HOME}/.bashrc"
+zsh_rcfile="${HOME}/.zshrc"
 scriptname="$(basename ${0})"
 # This makes we can't use spaces in our project structure
 ignorelist=("--exclude "{".git",".gitignore","gitty.sh"})
-executablelist=("${tmpdir}/"{"install.sh","templates/app.sh"})
+executablelist=("${tmpdir}/"{"install.sh","utils.sh","templates/app.sh"})
+utillist=("binaries/"{"create-bridge-app","bridgesh-uninstall","bridgesh-upgrade","bridgesh-update"})
 
 rcfilestr="BRIDGESH_BINDIR=${bindir}\nBRIDGESH_OS=${os}"
-bash_rcfilestr='. "${HOME}/.bridgeshrc"'
+bashzsh_rcfilestr='. "${HOME}/.bridgeshrc"'
 
 ###################### UTILITIES ##############################
 
 rcappend() {
-  [[ -f "${2}" ]] || touch "${2}"
-  grep -q "${1}" "${2}" || echo -e "\n${1}" >> "${2}"
+  if [[ -f "${2}" ]]; then
+    grep -q "${1}" "${2}" || echo -e "\n${1}" >> "${2}"
+  else
+    echo -e "\n${1}" >> "${2}"
+  fi
 }
 
 rctakeaway() {
@@ -135,7 +145,8 @@ if [[ "${scriptname}" == "uninstall.sh" ]]; then
 
   rm -rf "${dir}"
   rm -rf "${rcfile}"
-  rctakeaway "${bash_rcfilestr}" "${bash_rcfile}"
+  rctakeaway "${bashzsh_rcfilestr}" "${bash_rcfile}"
+  rctakeaway "${bashzsh_rcfilestr}" "${zsh_rcfile}"
 
   ${upgrade} || echo "Bridge.sh has been uninstalled"
 else
@@ -147,7 +158,7 @@ else
   fi
 
   rm -rf "${tmpdir}"
-  mkdir -p "${tmpdir}"
+  mkdir -p "${tmpdir}" "${tmpdir}/binaries"
 
   if ${test}; then
     if [[ "${testsrc}" == http*://* ]]; then
@@ -164,8 +175,17 @@ else
   [[ -f "${dir}/uninstall.sh" ]] && "${dir}/uninstall.sh" -u
 
   rcwrite "${rcfilestr}" "${rcfile}"
-  rcappend "${bash_rcfilestr}" "${bash_rcfile}"
+  rcappend "${bashzsh_rcfilestr}" "${bash_rcfile}"
+  rcappend "${bashzsh_rcfilestr}" "${zsh_rcfile}"
   cat "${tmpdir}/templates/rc.sh" >> "${rcfile}"
+
+  (
+    cd "${tmpdir}"
+
+    for util in ${utillist[@]}; do
+      ln -s "../utils.sh" "${util}" 
+    done
+  )
 
   mv "${tmpdir}/"{"install.sh","uninstall.sh"}
   mv "${tmpdir}" "${dir}"
