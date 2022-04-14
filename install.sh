@@ -53,7 +53,7 @@ c_blue="\033[1;34m"
 c_magenta="\033[1;35m"
 c_cyan="\033[1;36m"
 
-ignorelist=(".git" ".gitignore" "gitty.sh")
+ignorelist=(".git" ".gitignore" "gitty.sh" "tests.bats")
 ignorelist=($(paramexpand "--exclude" "${ignorelist[@]}"))
 exelist=(
   "install.sh" "utils.sh" "templates/app.sh" "utils.sh"
@@ -146,7 +146,7 @@ alias chkvalue='{
 }'
 
 webscrap() {
-  local exclude=()
+  local exclude=('')
   local src=""
   local dest="."
 
@@ -179,7 +179,6 @@ webscrap() {
       (contain "$(pathify "${item}")" "${exclude[@]}") && continue
 
       # Space in "${item: -1}" is intented
-      # TODO: test on mac
       if [[ "${item: -1}" == "/" ]]; then
         mkdir -p "$(urldecode "${item}")"
 

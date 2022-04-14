@@ -9,7 +9,7 @@ if [[ "${BRIDGESH_SHELL}" == "bash" ]]; then
   export BRIDGESH_DIR="$(dirname "${0}")/bridge_modules/bridgesh"
   export BRIDGESH_BINDIR="$(dirname "$(type -P dirname)")"
 else
-  export BRIDGESH_DIR="${0:a:h}/bridge_modules/bridgesh"
+  export BRIDGESH_DIR="${0:a:h}/bridgesh"
   export BRIDGESH_BINDIR="$(dirname "$(command -v dirname)")"
 fi
 
