@@ -10,6 +10,20 @@
 set -euo pipefail
 shopt -s expand_aliases
 
+#################### INIT UTILITIES ########################
+
+paramexpand() {
+  for item in "${@:2}"; do
+    echo "${1}" "${item}"
+  done
+}
+
+listexpand() {
+  for item in "${@:2}"; do
+    echo "${1}${item}"
+  done
+}
+
 ###################### DATA ##############################
 
 test=false
@@ -29,15 +43,45 @@ rcfile="${HOME}/.bridgeshrc"
 bash_rcfile="${HOME}/.bashrc"
 zsh_rcfile="${HOME}/.zshrc"
 scriptname="$(basename ${0})"
-# This makes we can't use spaces in our project structure
-ignorelist=("--exclude "{".git",".gitignore","gitty.sh"})
-executablelist=("${tmpdir}/"{"install.sh","utils.sh","templates/app.sh"})
-utillist=("binaries/"{"create-bridge-app","bridgesh-uninstall","bridgesh-upgrade","bridgesh-update"})
+shell="$(basename "${SHELL}")"
 
-rcfilestr="BRIDGESH_BINDIR=${bindir}\nBRIDGESH_OS=${os}"
+c_default="\033[0m"
+c_red="\033[1;31m"
+c_green="\033[1;32m"
+c_yellow="\033[1;33m"
+c_blue="\033[1;34m"
+c_magenta="\033[1;35m"
+c_cyan="\033[1;36m"
+
+ignorelist=(".git" ".gitignore" "gitty.sh")
+ignorelist=($(paramexpand "--exclude" "${ignorelist[@]}"))
+exelist=(
+  "install.sh" "utils.sh" "templates/app.sh" "utils.sh"
+  "modules/linux.sh" "modules/darwin.sh" "modules/bsd.sh"
+)
+exelist=($(listexpand "${tmpdir}/" "${exelist[@]}"))
+
+rcfilestr="export BRIDGESH_BINDIR=${bindir}\nexport BRIDGESH_OS=${os}"
 bashzsh_rcfilestr='. "${HOME}/.bridgeshrc"'
 
 ###################### UTILITIES ##############################
+
+prompt() {
+  local color="${c_default}"
+
+  case "${1}" in
+    -i|--info)
+      color="${c_cyan}" ;;
+    -a|--attention)
+      color="${c_yellow}" ;;
+    -e|--error)
+      color="${c_red}" ;;
+    -s|--success)
+      color="${c_green}" ;;
+  esac
+
+  echo -e "  ${color}${@:2}${c_default}"
+}
 
 rcappend() {
   if [[ -f "${2}" ]]; then
@@ -72,8 +116,22 @@ contain() {
   return 1
 }
 
-alias novalue='echo "${1} needs value"; exit 1'
-alias invalidparam='echo "${1} is not a valid parameter"; exit 1'
+getfuns() {
+  grep "() {" "${1}" | sed 's/() {//'
+}
+
+binlinks() {
+  (
+    cd "${1}"
+
+    for bin in $(getfuns "${2}"); do
+      ln -s "../${2}" "${3}/${bin}"
+    done
+  )
+}
+
+alias novalue='prompt -e "${1} needs value"; exit 1'
+alias invalidparam='prompt -e "${1} is not a valid parameter"; exit 1'
 alias nextparam='shift'
 alias chkvalue='{
   if [[ $# -ge 2 ]]; then
@@ -103,15 +161,15 @@ webscrap() {
           src="${1}"
         elif [[ "${dest}" == "." ]]; then
           dest="${1}"
-        fi
-        ;;
+        fi ;;
     esac
 
     nextparam
   done
 
-  # Can't do short circuit here, use "if" instead
-  if [[ "${src}" == "" ]]; then echo "No source?"; exit 1; fi
+  if [[ "${src}" == "" ]];
+  then prompt -e "No source?"; exit 1
+  fi
 
   (
     cd "${dest}"
@@ -120,6 +178,8 @@ webscrap() {
       sed 's/".*//'); do
       (contain "$(pathify "${item}")" "${exclude[@]}") && continue
 
+      # Space in "${item: -1}" is intented
+      # TODO: test on mac
       if [[ "${item: -1}" == "/" ]]; then
         mkdir -p "$(urldecode "${item}")"
 
@@ -138,9 +198,9 @@ webscrap() {
 
 if [[ "${scriptname}" == "uninstall.sh" ]]; then
   if ${upgrade}; then
-    echo "Removing old Bridge.sh installation..."
+    prompt -i "Removing old Bridge.sh installation..."
   else
-    echo "Uninstalling Bridge.sh..."
+    prompt -i "Uninstalling Bridge.sh..."
   fi
 
   rm -rf "${dir}"
@@ -148,22 +208,29 @@ if [[ "${scriptname}" == "uninstall.sh" ]]; then
   rctakeaway "${bashzsh_rcfilestr}" "${bash_rcfile}"
   rctakeaway "${bashzsh_rcfilestr}" "${zsh_rcfile}"
 
-  ${upgrade} || echo "Bridge.sh has been uninstalled"
+  ${upgrade} || prompt -s "Bridge.sh has been uninstalled"
 else
-  echo "Installing Bridge.sh..."
+  prompt -i "Installing Bridge.sh..."
 
   if ! [[ "${os}" =~ ^(bsd|linux|darwin)$ ]]; then
-    echo "Sorry, this platform is not (yet) supported"
+    prompt -e "Sorry, this platform is not (yet) supported"
+    exit 1
+  elif ! [[ "${shell}" =~ ^(bash|zsh)$ ]]; then
+    prompt -e "Sorry, this shell is not (yet) supported"
     exit 1
   fi
 
   rm -rf "${tmpdir}"
-  mkdir -p "${tmpdir}" "${tmpdir}/binaries"
+  mkdir -p "${tmpdir}"
+  mkdir -p "${tmpdir}/binaries"
+  mkdir -p "${tmpdir}/linux_binaries"
+  mkdir -p "${tmpdir}/darwin_binaries"
+  mkdir -p "${tmpdir}/bsd_binaries"
 
   if ${test}; then
     if [[ "${testsrc}" == http*://* ]]; then
       webscrap "${testsrc}" ${ignorelist[@]} "${tmpdir}"
-      chmod +x "${executablelist[@]}"
+      chmod +x "${exelist[@]}"
     else
       (cd "${testsrc}"; tar -c ${ignorelist[@]} . | tar -x -C "${tmpdir}")
     fi
@@ -179,17 +246,14 @@ else
   rcappend "${bashzsh_rcfilestr}" "${zsh_rcfile}"
   cat "${tmpdir}/templates/rc.sh" >> "${rcfile}"
 
-  (
-    cd "${tmpdir}"
-
-    for util in ${utillist[@]}; do
-      ln -s "../utils.sh" "${util}"
-    done
-  )
+  binlinks "${tmpdir}" "utils.sh" "binaries"
+  binlinks "${tmpdir}" "modules/linux.sh" "linux_binaries"
+  binlinks "${tmpdir}" "modules/darwin.sh" "darwin_binaries"
+  binlinks "${tmpdir}" "modules/bsd.sh" "bsd_binaries"
 
   mv "${tmpdir}/"{"install.sh","uninstall.sh"}
   mv "${tmpdir}" "${dir}"
 
-  echo "Bridge.sh has been installed"
-  echo "You need to reopen this terminal to take effect"
+  echo; prompt -s "Bridge.sh has been installed"
+  prompt -a "You need to reopen this terminal to take effect"
 fi
