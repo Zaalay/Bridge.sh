@@ -22,8 +22,7 @@ create-bridge-app() {
 }
 
 bridgesh-upgrade() {
-  curl -sS https://raw.githubusercontent.com/Zaalay/Bridge.sh/alpha/install.sh |
-  bash
+  curl -sSL https://github.com/Zaalay/Bridge.sh/raw/alpha/install.sh | bash
 }
 
 bridgesh-update() {

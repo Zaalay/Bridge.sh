@@ -10,7 +10,20 @@
 set -euo pipefail
 shopt -s expand_aliases
 
-#################### INIT UTILITIES ########################
+###################### INIT ########################
+
+c_default="\033[0m"
+c_red="\033[1;31m"
+c_green="\033[1;32m"
+c_yellow="\033[1;33m"
+c_blue="\033[1;34m"
+c_magenta="\033[1;35m"
+c_cyan="\033[1;36m"
+
+decor="  ${c_magenta}***${c_red}***${c_blue}***${c_green}***"
+decor+="${c_cyan}***${c_magenta}***${c_yellow}***${c_red}***${c_default}"
+
+echo -e "${decor}"
 
 paramexpand() {
   for item in "${@:2}"; do
@@ -33,9 +46,12 @@ upgrade=false
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 [[ os == *bsd ]] && os="bsd"
 
-src="https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha"
-testsrc="$(dirname "${0}")"
-[[ $# -ge 2 ]] && testsrc="${2}"
+if "${test}"; then
+  if [[ $# -ge 2 ]]; then src="${2}"; else src="$(dirname "${0}")"; fi
+else
+  src="https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha"
+fi
+
 bindir="$(dirname "$(type -P dirname)")"
 dir="${HOME}/.Bridge.sh"
 tmpdir="${HOME}/.Bridge.sh.bak"
@@ -44,14 +60,6 @@ bash_rcfile="${HOME}/.bashrc"
 zsh_rcfile="${HOME}/.zshrc"
 scriptname="$(basename ${0})"
 shell="$(basename "${SHELL}")"
-
-c_default="\033[0m"
-c_red="\033[1;31m"
-c_green="\033[1;32m"
-c_yellow="\033[1;33m"
-c_blue="\033[1;34m"
-c_magenta="\033[1;35m"
-c_cyan="\033[1;36m"
 
 ignorelist=(".git" ".gitignore" "gitty.sh" "tests.bats")
 ignorelist=($(paramexpand "--exclude" "${ignorelist[@]}"))
@@ -167,8 +175,8 @@ webscrap() {
     nextparam
   done
 
-  if [[ "${src}" == "" ]];
-  then prompt -e "No source?"; exit 1
+  if [[ "${src}" == "" ]]; then
+    prompt -e "No source?"; exit 1
   fi
 
   (
@@ -181,11 +189,7 @@ webscrap() {
       # Space in "${item: -1}" is intented
       if [[ "${item: -1}" == "/" ]]; then
         mkdir -p "$(urldecode "${item}")"
-
-        (
-          cd "${item}"
-          webscrap "${src}/${item}" "${dest}/${item}"
-        )
+        webscrap "${src}/${item}" "${dest}/${item}"
       else
         curl -sS "${src}/${item}" -o "$(urldecode "${item}")"
       fi
@@ -207,7 +211,10 @@ if [[ "${scriptname}" == "uninstall.sh" ]]; then
   rctakeaway "${bashzsh_rcfilestr}" "${bash_rcfile}"
   rctakeaway "${bashzsh_rcfilestr}" "${zsh_rcfile}"
 
-  ${upgrade} || prompt -s "Bridge.sh has been uninstalled"
+  if ! ${upgrade}; then
+    prompt -s "Bridge.sh has been uninstalled"
+    echo -e "${decor}"
+  fi
 else
   prompt -i "Installing Bridge.sh..."
 
@@ -227,11 +234,11 @@ else
   mkdir -p "${tmpdir}/bsd_binaries"
 
   if ${test}; then
-    if [[ "${testsrc}" == http*://* ]]; then
-      webscrap "${testsrc}" ${ignorelist[@]} "${tmpdir}"
+    if [[ "${src}" == http*://* ]]; then
+      webscrap "${src}" ${ignorelist[@]} "${tmpdir}"
       chmod +x "${exelist[@]}"
     else
-      (cd "${testsrc}"; tar -c ${ignorelist[@]} . | tar -x -C "${tmpdir}")
+      (cd "${src}"; tar -c ${ignorelist[@]} . | tar -x -C "${tmpdir}")
     fi
   else
     curl -sSL "${src}" |
@@ -253,6 +260,7 @@ else
   mv "${tmpdir}/"{"install.sh","uninstall.sh"}
   mv "${tmpdir}" "${dir}"
 
-  echo; prompt -s "Bridge.sh has been installed"
+  echo -e "${decor}"; prompt -s "Bridge.sh has been installed"
   prompt -a "You need to reopen this terminal to take effect"
+  echo -e "${decor}"
 fi

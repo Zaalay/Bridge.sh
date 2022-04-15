@@ -4,7 +4,7 @@ Bridge UNIX systems
 ## How to install
 You can simply run
 ```
-curl -sS https://raw.githubusercontent.com/Zaalay/Bridge.sh/alpha/install.sh | bash
+curl -sSL https://github.com/Zaalay/Bridge.sh/raw/alpha/install.sh | bash
 ```
 and boom! You got it installed! :D
 
