@@ -4,5 +4,5 @@
 
 if ! (return 0 2> /dev/null); then
   source "$(dirname "$(dirname "${0}")")/modules/core.sh" "full"
-  "${BRIDGESH_SCRIPTNAME}" "${@:1}"
+  "${BRIDGE_SCRIPTNAME}" "${@:1}"
 fi

@@ -4,10 +4,25 @@
 # STATIC VARIABLES WILL BE PATCHED BY INSTALLER
 # CHECK ABOVE THE COPYRIGHT
 #
-# * BRIDGESH_BINDIR (above)
-# * BRIDGESH_OS (above)
-# * BRIDGESH_DIR
+# * BRIDGE_BINDIR (above)
+# * BRIDGE_OS (above)
 
-export BRIDGESH_DIR="${HOME}/.Bridge.sh"
+export BRIDGE_DIR="${HOME}/.Bridge.sh"
+export BRIDGE_SHELL="sh"
 
-. "${BRIDGESH_DIR}/modules/core.sh" "preloaded"
+if ! [[ -z ${BASH_VERSION+x} ]]; then
+  export BRIDGE_SHELL="bash"
+elif ! [[ -z ${ZSH_VERSION+x} ]]; then
+  export BRIDGE_SHELL="zsh"
+fi
+
+if [[ "${BRIDGE_SHELL}" == "zsh" ]]; then
+  export BRIDGE_EMULATE="$(emulate)"
+  emulate -L ksh
+fi
+
+. "${BRIDGE_DIR}/modules/core.sh" "preloaded"
+
+if [[ "${BRIDGE_SHELL}" == "zsh" ]]; then
+  emulate ${BRIDGE_EMULATE}
+fi

@@ -2,67 +2,77 @@
 # Part of Bridge.sh, MIT-licensed
 # Copyright (c) 2022 Zaalay Studio, Muhammad Rivan
 #
-# * BRIDGESH_BINDIR
-# * BRIDGESH_OS
-# * BRIDGESH_DIR
+# * BRIDGE_BINDIR
+# * BRIDGE_OS
+# * BRIDGE_DIR
 #
-# BRIDGESH_LOADLV=simple|preloaded|full
+# BRIDGE_LOADLV=simple|preloaded|full
 
-if [[ $# -eq 0 ]]; then
-  exit 1
+# Make this more sensible
+shopt -s expand_aliases 2> /dev/null || setopt aliases
+
+if ! (return 0 2> /dev/null); then
+  BRIDGE_LOADLV="full"
 elif [[ $# -ge 1 ]]; then
-  BRIDGESH_LOADLV="${1}"
-elif ! (return 0 2> /dev/null); then
-  BRIDGESH_LOADLV="full"
+  BRIDGE_LOADLV="${1}"
+elif [[ $# -eq 0 ]]; then
+  exit 1
 fi
 
-if [[ "${BRIDGESH_LOADLV}" =~ ^(semifull|full)$ ]]; then
-  export BRIDGESH_BINDIR="$(dirname "$(env which dirname)")"
-  export BRIDGESH_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-  [[ "${BRIDGESH_OS}" == *bsd ]] && export BRIDGESH_OS="bsd"
+if [[ "${BRIDGE_LOADLV}" =~ ^(semifull|full)$ ]]; then
+  export BRIDGE_BINDIR="$(dirname "$(env which dirname)")"
+  export BRIDGE_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  [[ "${BRIDGE_OS}" == *bsd ]] && export BRIDGE_OS="bsd"
 fi
 
-if [[ "${BRIDGESH_LOADLV}" =~ ^(full)$ ]]; then
-  export BRIDGESH_DIR="$(dirname "$(dirname "${0}")")"
+if [[ "${BRIDGE_LOADLV}" =~ ^(full)$ ]]; then
+  export BRIDGE_DIR="$(dirname "$(dirname "${0}")")"
 fi
 
-if [[ "${BRIDGESH_LOADLV}" =~ ^(semifull|full|preloaded)$ ]]; then
-  BRIDGESH_USROSBINDIR="${BRIDGESH_DIR}/${BRIDGESH_OS}_binaries"
-  BRIDGESH_SCRIPTNAME="$(basename ${0})"
-  BRIDGESH_USRBINDIR="${BRIDGESH_DIR}/binaries"
+if [[ "${BRIDGE_LOADLV}" =~ ^(semifull|full|preloaded)$ ]]; then
+  BRIDGE_USROSBINDIR="${BRIDGE_DIR}/${BRIDGE_OS}_binaries"
+  BRIDGE_SCRIPTNAME="$(basename ${0})"
+  BRIDGE_USRBINDIR="${BRIDGE_DIR}/binaries"
 
   # Don't use "source" as it also used for terminal inits
-  . "${BRIDGESH_DIR}/modules/${BRIDGESH_OS}.sh"
-  export PATH="${BRIDGESH_USRBINDIR}:${BRIDGESH_USROSBINDIR}:${PATH}"
+  . "${BRIDGE_DIR}/modules/${BRIDGE_OS}.sh"
+  export PATH="${BRIDGE_USRBINDIR}:${BRIDGE_USROSBINDIR}:${PATH}"
 fi
 
-BRIDGESH_SHELL="$(basename "${SHELL}")"
-BRIDGESH_CDEFAULT="\033[0m"
-BRIDGESH_CRED="\033[1;31m"
-BRIDGESH_CGREEN="\033[1;32m"
-BRIDGESH_CYELLOW="\033[1;33m"
-BRIDGESH_CBLUE="\033[1;34m"
-BRIDGESH_CMAGENTA="\033[1;35m"
-BRIDGESH_CCYAN="\033[1;36m"
+export BRIDGE_SHELL="sh"
 
-bridgesh::cli::write() {
-  local color="${BRIDGESH_CDEFAULT}"
+if ! [[ -z ${BASH_VERSION+x} ]]; then
+  export BRIDGE_SHELL="bash"
+elif ! [[ -z ${ZSH_VERSION+x} ]]; then
+  export BRIDGE_SHELL="zsh"
+fi
+
+BRIDGE_CDEFAULT="\033[0m"
+BRIDGE_CRED="\033[1;31m"
+BRIDGE_CGREEN="\033[1;32m"
+BRIDGE_CYELLOW="\033[1;33m"
+BRIDGE_CBLUE="\033[1;34m"
+BRIDGE_CMAGENTA="\033[1;35m"
+BRIDGE_CCYAN="\033[1;36m"
+
+bridge::cli::write() {
+  local color="${BRIDGE_CDEFAULT}"
 
   case "${1}" in
     -i|--info)
-      color="${BRIDGESH_CCYAN}" ;;
+      color="${BRIDGE_CCYAN}" ;;
     -a|--attention)
-      color="${BRIDGESH_CYELLOW}" ;;
+      color="${BRIDGE_CYELLOW}" ;;
     -e|--error)
-      color="${BRIDGESH_CRED}" ;;
+      color="${BRIDGE_CRED}" ;;
     -s|--success)
-      color="${BRIDGESH_CGREEN}" ;;
+      color="${BRIDGE_CGREEN}" ;;
   esac
 
-  echo -e "  ${color}${@:2}${BRIDGESH_CDEFAULT}"
+  echo -e "  ${color}${@:2}${BRIDGE_CDEFAULT}"
 }
 
-bridgesh::rc::append() {
+bridge::rc::append() {
   if [[ -f "${2}" ]]; then
     grep -q "${1}" "${2}" || echo -e "\n${1}" >> "${2}"
   else
@@ -70,20 +80,20 @@ bridgesh::rc::append() {
   fi
 }
 
-bridgesh::rc::takeaway() {
+bridge::rc::takeaway() {
   # echo is intended for inplace replace
   [[ -f "${2}" ]] && echo "$(grep -v "${1}" "${2}")" > "${2}"
 }
 
-bridgesh::rc::write() {
+bridge::rc::write() {
   echo -e "${1}" > "${2}"
 }
 
-bridgesh::path::decode() {
+bridge::path::decode() {
   echo -e "$(echo "${1}" | sed 's/+/ /g;s/%\(..\)/\\x\1/g;')" | sed 's:/*$::'
 }
 
-bridgesh::array::contain() {
+bridge::array::contain() {
   for item in ${@:2}; do
     [[ "${1}" == "${item}" ]] && return 0
   done
@@ -91,49 +101,49 @@ bridgesh::array::contain() {
   return 1
 }
 
-bridgesh::shbin::get_functions() {
+bridge::shbin::get_functions() {
   grep -v "grep" "${1}" | grep "() {" | sed 's/() {//'
 }
 
-bridgesh::shbin::link_functions() {
+bridge::shbin::link_functions() {
   (
     cd "${1}"
 
-    for bin in $(bridgesh::shbin::get_functions "${2}"); do
+    for bin in $(bridge::shbin::get_functions "${2}"); do
       ln -s "../${2}" "${3}/${bin}"
     done
   )
 }
 
-alias bridgesh::param::warn_value='{
-  bridgesh::cli::write -e "${1} needs value"
+alias bridge::param::warn_value='{
+  bridge::cli::write -e "${1} needs value"
   exit 1
 }'
 
-alias bridgesh::param::invalidate='{
-  bridgesh::cli::write -e "${1} is not a valid parameter"
+alias bridge::param::invalidate='{
+  bridge::cli::write -e "${1} is not a valid parameter"
   exit 1
 }'
 
-alias bridgesh::param::next='shift'
+alias bridge::param::next='shift'
 
-alias bridgesh::param::_get_value='{
+alias bridge::param::_get_value='{
   if [[ $# -ge 2 ]]; then
     if [[ "${2:1:1}" != "-" ]]; then
-      __bridgesh_lastvalue__="${2}"; bridgesh::param::next
+      __bridgesh_lastvalue__="${2}"; bridge::param::next
     else
-      bridgesh::param::warn_value
+      bridge::param::warn_value
     fi
   else
-    bridgesh::param::warn_value
+    bridge::param::warn_value
   fi
 }'
 
-bridgesh::web::get_items() {
+bridge::web::get_items() {
   curl -s "${1}" | grep href | sed 's/.*href="//' | sed 's/".*//'
 }
 
-bridgesh::web::scrap() {
+bridge::web::scrap() {
   local exclude=('')
   local src=""
   local dest="."
@@ -141,10 +151,10 @@ bridgesh::web::scrap() {
   while [[ $# -gt 0 ]]; do
     case "${1}" in
       --exclude)
-        bridgesh::param::_get_value
-        exclude+=("$(bridgesh::path::decode "${__bridgesh_lastvalue__}")") ;;
+        bridge::param::_get_value
+        exclude+=("$(bridge::path::decode "${__bridgesh_lastvalue__}")") ;;
       -*)
-        bridgesh::param::invalidate ;;
+        bridge::param::invalidate ;;
       *)
         if [[ "${src}" == "" ]]; then
           src="${1}"
@@ -153,31 +163,28 @@ bridgesh::web::scrap() {
         fi ;;
     esac
 
-    bridgesh::param::next
+    bridge::param::next
   done
 
   if [[ "${src}" == "" ]]; then
-    bridgesh::cli::write -e "No source?"; exit 1
+    bridge::cli::write -e "No source?"; exit 1
   fi
 
-  (
-    cd "${dest}"
+  mkdir -p "${dest}"
 
-    for item in $(bridgesh::web::get_items "${src}"); do
-      if (bridgesh::array::contain "$(bridgesh::path::decode "${item}")" \
-          "${exclude[@]}"); then
-        continue
-      fi
+  for item in $(bridge::web::get_items "${src}"); do
+    if (bridge::array::contain "$(bridge::path::decode "${item}")" \
+        "${exclude[@]}"); then
+      continue
+    fi
 
-      # Space in "${item: -1}" is intented
-      if [[ "${item: -1}" == "/" ]]; then
-        mkdir -p "$(bridgesh::path::decode "${item}")"
-        bridgesh::web::scrap "${src}/${item}" "${dest}/${item}"
-      else
-        curl -sS "${src}/${item}" -o "$(bridgesh::path::decode "${item}")"
-      fi
-    done
-  )
+    # Space in "${item: -1}" is intented
+    if [[ "${item: -1}" == "/" ]]; then
+      bridge::web::scrap "${src}/${item}" "${dest}/${item}"
+    else
+      curl -sS "${src}/${item}" -o "$(bridge::path::decode "${dest}/${item}")"
+    fi
+  done
 }
 
-if ! (return 0 2> /dev/null); then "${BRIDGESH_SCRIPTNAME}" "${@:1}"; fi
+if ! (return 0 2> /dev/null); then "${BRIDGE_SCRIPTNAME}" "${@:1}"; fi

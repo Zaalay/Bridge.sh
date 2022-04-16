@@ -3,7 +3,7 @@
 # Copyright (c) 2022 Zaalay Studio, Muhammad Rivan
 
 sed() {
-  local cmd=("${BRIDGESH_BINDIR}/sed")
+  local cmd=("${BRIDGE_BINDIR}/sed")
 
   while [[ $# -gt 0 ]]; do
     case "${1}" in
@@ -32,5 +32,5 @@ sed() {
 
 if ! (return 0 2> /dev/null); then
   source "$(dirname "$(dirname "${0}")")/modules/core.sh" "full"
-  "${BRIDGESH_SCRIPTNAME}" "${@:1}"
+  "${BRIDGE_SCRIPTNAME}" "${@:1}"
 fi

@@ -49,6 +49,8 @@ realuser="${SUDO_USER:-$(logname 2> /dev/null || echo "${USER}")}"
 
 bindir="$(dirname "$(type -P dirname)")"
 realhomedir="$(eval echo ~"${realuser}")"
+# If can't get the real home dir, get the conventional $HOME instead
+[[ realhomedir == "~${realuser}" ]] && realhomedir="${HOME}"
 dir="${realhomedir}/.Bridge.sh"
 tmpdir="${realhomedir}/.Bridge.sh.bak"
 rcfile="${realhomedir}/.bridgeshrc"
@@ -65,21 +67,22 @@ exelist=(
 )
 exelist=($(listexpand "${tmpdir}/" "${exelist[@]}"))
 
-rcfilestr="export BRIDGESH_BINDIR=${bindir}\nexport BRIDGESH_OS=${os}"
+rcfilestr="export BRIDGE_BINDIR=${bindir}\nexport BRIDGE_OS=${os}"
 bashzsh_rcfilestr='. "${HOME}/.bridgeshrc"'
 
 ###################### ALIASES ##############################
 
-alias rctakeaway='bridgesh::rc::takeaway'
-alias rcwrite='bridgesh::rc::write'
-alias rcappend='bridgesh::rc::append'
-alias webscrap='bridgesh::web::scrap'
-alias binlinks='bridgesh::shbin::link_functions'
-alias success='bridgesh::cli::write -s'
-alias attention='bridgesh::cli::write -a'
+alias rctakeaway='bridge::rc::takeaway'
+alias rcwrite='bridge::rc::write'
+alias rcappend='bridge::rc::append'
+alias webscrap='bridge::web::scrap'
+alias binlinks='bridge::shbin::link_functions'
+alias success='bridge::cli::write -s'
+alias attention='bridge::cli::write -a'
 
 ###################### INSTALATION ##############################
-export BRIDGESH_DIR="${dir}"
+
+export BRIDGE_DIR="${dir}"
 
 if [[ "${scriptname}" == "uninstall.sh" ]]; then
   source "${dir}/modules/core.sh" "simple"
