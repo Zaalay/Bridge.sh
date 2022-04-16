@@ -4,12 +4,10 @@
 # STATIC VARIABLES WILL BE PATCHED BY INSTALLER
 # CHECK ABOVE THE COPYRIGHT
 #
-# * BRIDGESH_BINDIR
-# * BRIDGESH_OS
+# * BRIDGESH_BINDIR (above)
+# * BRIDGESH_OS (above)
+# * BRIDGESH_DIR
 
-export BRIDGESH_SHELL="$(basename "${SHELL}")"
 export BRIDGESH_DIR="${HOME}/.Bridge.sh"
 
-. "${BRIDGESH_DIR}/modules/core.sh"
-. "${BRIDGESH_DIR}/modules/${BRIDGESH_OS}.sh"
-
+. "${BRIDGESH_DIR}/modules/core.sh" "preloaded"

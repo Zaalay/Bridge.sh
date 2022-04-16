@@ -31,6 +31,6 @@ sed() {
 }
 
 if ! (return 0 2> /dev/null); then
-  source "${BRIDGESH_DIR}/modules/core.sh"
+  source "$(dirname "$(dirname "${0}")")/modules/core.sh" "full"
   "${BRIDGESH_SCRIPTNAME}" "${@:1}"
 fi

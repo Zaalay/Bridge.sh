@@ -14,16 +14,15 @@ shopt -s expand_aliases
 
 c_default="\033[0m"
 c_red="\033[1;31m"
-c_green="\033[1;32m"
-c_yellow="\033[1;33m"
-c_blue="\033[1;34m"
-c_magenta="\033[1;35m"
 c_cyan="\033[1;36m"
 
-decor="  ${c_magenta}***${c_red}***${c_blue}***${c_green}***"
-decor+="${c_cyan}***${c_magenta}***${c_yellow}***${c_red}***${c_default}"
+info() {
+  echo -e "  ${c_cyan}${@:1}${c_default}"
+}
 
-echo -e "${decor}"
+error() {
+  echo -e "  ${c_red}${@:1}${c_default}"
+}
 
 paramexpand() {
   for item in "${@:2}"; do
@@ -45,26 +44,23 @@ upgrade=false
 [[ $# -ge 1 && "${1}" == "-u" ]] && upgrade=true
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 [[ os == *bsd ]] && os="bsd"
-
-if "${test}"; then
-  if [[ $# -ge 2 ]]; then src="${2}"; else src="$(dirname "${0}")"; fi
-else
-  src="https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha"
-fi
+# Used when this script is executed by su, sudo, and such
+realuser="${SUDO_USER:-$(logname 2> /dev/null || echo "${USER}")}"
 
 bindir="$(dirname "$(type -P dirname)")"
-dir="${HOME}/.Bridge.sh"
-tmpdir="${HOME}/.Bridge.sh.bak"
-rcfile="${HOME}/.bridgeshrc"
-bash_rcfile="${HOME}/.bashrc"
-zsh_rcfile="${HOME}/.zshrc"
+realhomedir="$(eval echo ~"${realuser}")"
+dir="${realhomedir}/.Bridge.sh"
+tmpdir="${realhomedir}/.Bridge.sh.bak"
+rcfile="${realhomedir}/.bridgeshrc"
+bash_rcfile="${realhomedir}/.bashrc"
+zsh_rcfile="${realhomedir}/.zshrc"
 scriptname="$(basename ${0})"
 shell="$(basename "${SHELL}")"
 
 ignorelist=(".git" ".gitignore" "gitty.sh" "tests.bats")
 ignorelist=($(paramexpand "--exclude" "${ignorelist[@]}"))
 exelist=(
-  "install.sh" "utils.sh" "templates/app.sh" "utils.sh"
+  "install.sh" "utils.sh" "templates/app.sh" "modules/core.sh"
   "modules/linux.sh" "modules/darwin.sh" "modules/bsd.sh"
 )
 exelist=($(listexpand "${tmpdir}/" "${exelist[@]}"))
@@ -72,138 +68,26 @@ exelist=($(listexpand "${tmpdir}/" "${exelist[@]}"))
 rcfilestr="export BRIDGESH_BINDIR=${bindir}\nexport BRIDGESH_OS=${os}"
 bashzsh_rcfilestr='. "${HOME}/.bridgeshrc"'
 
-###################### UTILITIES ##############################
+###################### ALIASES ##############################
 
-prompt() {
-  local color="${c_default}"
-
-  case "${1}" in
-    -i|--info)
-      color="${c_cyan}" ;;
-    -a|--attention)
-      color="${c_yellow}" ;;
-    -e|--error)
-      color="${c_red}" ;;
-    -s|--success)
-      color="${c_green}" ;;
-  esac
-
-  echo -e "  ${color}${@:2}${c_default}"
-}
-
-rcappend() {
-  if [[ -f "${2}" ]]; then
-    grep -q "${1}" "${2}" || echo -e "\n${1}" >> "${2}"
-  else
-    echo -e "\n${1}" >> "${2}"
-  fi
-}
-
-rctakeaway() {
-  # echo is intended for inplace replace
-  [[ -f "${2}" ]] && echo "$(grep -v "${1}" "${2}")" > "${2}"
-}
-
-rcwrite() {
-  echo -e "${1}" > "${2}"
-}
-
-urldecode() {
-  echo -e "$(echo "${1}" | sed 's/+/ /g;s/%\(..\)/\\x\1/g;')"
-}
-
-pathify() {
-  echo "${1}" | sed 's:/*$::'
-}
-
-contain() {
-  for item in ${@:2}; do
-    [[ "${1}" == "${item}" ]] && return 0
-  done
-
-  return 1
-}
-
-getfuns() {
-  grep "() {" "${1}" | sed 's/() {//'
-}
-
-binlinks() {
-  (
-    cd "${1}"
-
-    for bin in $(getfuns "${2}"); do
-      ln -s "../${2}" "${3}/${bin}"
-    done
-  )
-}
-
-alias novalue='prompt -e "${1} needs value"; exit 1'
-alias invalidparam='prompt -e "${1} is not a valid parameter"; exit 1'
-alias nextparam='shift'
-alias chkvalue='{
-  if [[ $# -ge 2 ]]; then
-    if [[ "${2:1:1}" != "-" ]]; then
-      __lastvalue__="${2}"; nextparam
-    else
-      novalue
-    fi
-  else
-    novalue
-  fi
-}'
-
-webscrap() {
-  local exclude=('')
-  local src=""
-  local dest="."
-
-  while [[ $# -gt 0 ]]; do
-    case "${1}" in
-      --exclude)
-        chkvalue; exclude+=("$(pathify "${__lastvalue__}")") ;;
-      -*)
-        invalidparam ;;
-      *)
-        if [[ "${src}" == "" ]]; then
-          src="${1}"
-        elif [[ "${dest}" == "." ]]; then
-          dest="${1}"
-        fi ;;
-    esac
-
-    nextparam
-  done
-
-  if [[ "${src}" == "" ]]; then
-    prompt -e "No source?"; exit 1
-  fi
-
-  (
-    cd "${dest}"
-
-    for item in $(curl -s "${src}" | grep href | sed 's/.*href="//' |
-      sed 's/".*//'); do
-      (contain "$(pathify "${item}")" "${exclude[@]}") && continue
-
-      # Space in "${item: -1}" is intented
-      if [[ "${item: -1}" == "/" ]]; then
-        mkdir -p "$(urldecode "${item}")"
-        webscrap "${src}/${item}" "${dest}/${item}"
-      else
-        curl -sS "${src}/${item}" -o "$(urldecode "${item}")"
-      fi
-    done
-  )
-}
+alias rctakeaway='bridgesh::rc::takeaway'
+alias rcwrite='bridgesh::rc::write'
+alias rcappend='bridgesh::rc::append'
+alias webscrap='bridgesh::web::scrap'
+alias binlinks='bridgesh::shbin::link_functions'
+alias success='bridgesh::cli::write -s'
+alias attention='bridgesh::cli::write -a'
 
 ###################### INSTALATION ##############################
+export BRIDGESH_DIR="${dir}"
 
 if [[ "${scriptname}" == "uninstall.sh" ]]; then
+  source "${dir}/modules/core.sh" "simple"
+
   if ${upgrade}; then
-    prompt -i "Removing old Bridge.sh installation..."
+    info "Removing old Bridge.sh installation..."
   else
-    prompt -i "Uninstalling Bridge.sh..."
+    info "Uninstalling Bridge.sh..."
   fi
 
   rm -rf "${dir}"
@@ -211,18 +95,15 @@ if [[ "${scriptname}" == "uninstall.sh" ]]; then
   rctakeaway "${bashzsh_rcfilestr}" "${bash_rcfile}"
   rctakeaway "${bashzsh_rcfilestr}" "${zsh_rcfile}"
 
-  if ! ${upgrade}; then
-    prompt -s "Bridge.sh has been uninstalled"
-    echo -e "${decor}"
-  fi
+  ${upgrade} || success "Bridge.sh has been uninstalled"
 else
-  prompt -i "Installing Bridge.sh..."
+  info "Installing Bridge.sh..."
 
   if ! [[ "${os}" =~ ^(bsd|linux|darwin)$ ]]; then
-    prompt -e "Sorry, this platform is not (yet) supported"
+    error "Sorry, this platform is not (yet) supported"
     exit 1
   elif ! [[ "${shell}" =~ ^(bash|zsh)$ ]]; then
-    prompt -e "Sorry, this shell is not (yet) supported"
+    error "Sorry, this shell is not (yet) supported"
     exit 1
   fi
 
@@ -233,14 +114,24 @@ else
   mkdir -p "${tmpdir}/darwin_binaries"
   mkdir -p "${tmpdir}/bsd_binaries"
 
-  if ${test}; then
-    if [[ "${src}" == http*://* ]]; then
+  if "${test}"; then
+    if [[ $# -ge 2 ]]; then
+      src="${2}"
+      source <(curl -sS "${src}/modules/core.sh") "simple"
+
       webscrap "${src}" ${ignorelist[@]} "${tmpdir}"
       chmod +x "${exelist[@]}"
     else
+      src="$(dirname "${0}")"
+      source "${src}/modules/core.sh" "simple"
+
       (cd "${src}"; tar -c ${ignorelist[@]} . | tar -x -C "${tmpdir}")
     fi
   else
+    src="https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha"
+    gitsrc="https://github.com/Zaalay/Bridge.sh/raw/alpha"
+    source <(curl -sSL "${gitsrc}/modules/core.sh") "simple"
+
     curl -sSL "${src}" |
     tar -xz -C "${tmpdir}" --strip-components 1 ${ignorelist[@]}
   fi
@@ -250,9 +141,10 @@ else
   rcwrite "${rcfilestr}" "${rcfile}"
   rcappend "${bashzsh_rcfilestr}" "${bash_rcfile}"
   rcappend "${bashzsh_rcfilestr}" "${zsh_rcfile}"
-  cat "${tmpdir}/templates/rc.sh" >> "${rcfile}"
+  cat "${tmpdir}/templates/rcloader.sh" >> "${rcfile}"
 
   binlinks "${tmpdir}" "utils.sh" "binaries"
+  binlinks "${tmpdir}" "modules/core.sh" "binaries"
   binlinks "${tmpdir}" "modules/linux.sh" "linux_binaries"
   binlinks "${tmpdir}" "modules/darwin.sh" "darwin_binaries"
   binlinks "${tmpdir}" "modules/bsd.sh" "bsd_binaries"
@@ -260,7 +152,6 @@ else
   mv "${tmpdir}/"{"install.sh","uninstall.sh"}
   mv "${tmpdir}" "${dir}"
 
-  echo -e "${decor}"; prompt -s "Bridge.sh has been installed"
-  prompt -a "You need to reopen this terminal to take effect"
-  echo -e "${decor}"
+  echo; success "Bridge.sh has been installed"
+  attention "You need to reopen this terminal to take effect"
 fi
