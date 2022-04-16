@@ -48,9 +48,11 @@ os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 realuser="${SUDO_USER:-$(logname 2> /dev/null || echo "${USER}")}"
 
 bindir="$(dirname "$(type -P dirname)")"
+stdindir="/dev/stdin"
+[[ -e "/proc/self/fd/0" ]] && stdindir="/proc/self/fd/0"
 realhomedir="$(eval echo ~"${realuser}")"
 # If can't get the real home dir, get the conventional $HOME instead
-[[ realhomedir == "~${realuser}" ]] && realhomedir="${HOME}"
+[[ "${realhomedir}" == "~${realuser}" ]] && realhomedir="${HOME}"
 dir="${realhomedir}/.Bridge.sh"
 tmpdir="${realhomedir}/.Bridge.sh.bak"
 rcfile="${realhomedir}/.bridgeshrc"
@@ -120,7 +122,7 @@ else
   if "${test}"; then
     if [[ $# -ge 2 ]]; then
       src="${2}"
-      source <(curl -sS "${src}/modules/core.sh") "simple"
+      source "${stdindir}" <<< "$(curl -sS "${src}/modules/core.sh")" "simple"
 
       webscrap "${src}" ${ignorelist[@]} "${tmpdir}"
       chmod +x "${exelist[@]}"
@@ -133,7 +135,7 @@ else
   else
     src="https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha"
     gitsrc="https://github.com/Zaalay/Bridge.sh/raw/alpha"
-    source <(curl -sSL "${gitsrc}/modules/core.sh") "simple"
+    source "${stdindir}" <<< "$(curl -sSL "${gitsrc}/modules/core.sh")" "simple"
 
     curl -sSL "${src}" |
     tar -xz -C "${tmpdir}" --strip-components 1 ${ignorelist[@]}

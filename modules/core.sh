@@ -55,8 +55,17 @@ BRIDGE_CBLUE="\033[1;34m"
 BRIDGE_CMAGENTA="\033[1;35m"
 BRIDGE_CCYAN="\033[1;36m"
 
+bridge::str::upper() {
+  echo -e "${@:1}" | tr '[:lower:]' '[:upper:]'
+}
+
+bridge::str::lower() {
+  echo -e "${@:1}" | tr '[:upper:]' '[:lower:]'
+}
+
 bridge::cli::write() {
   local color="${BRIDGE_CDEFAULT}"
+  local text="${@:2}"
 
   case "${1}" in
     -i|--info)
@@ -67,9 +76,43 @@ bridge::cli::write() {
       color="${BRIDGE_CRED}" ;;
     -s|--success)
       color="${BRIDGE_CGREEN}" ;;
+    *)
+      color="${BRIDGE_CMAGENTA}"; text="${@:1}" ;;
   esac
 
-  echo -e "  ${color}${@:2}${BRIDGE_CDEFAULT}"
+  echo -e "  ${color}${text}${BRIDGE_CDEFAULT}"
+}
+
+bridge::cli::read() {
+  local varname="${@: -1}"
+  local text="${*:1:$#-1}"
+
+  echo -ne "${BRIDGE_CMAGENTA}"
+
+  if [[ "${BRIDGE_SHELL}" == "zsh" ]]; then
+    vared -p "  ${text}: " -c "${varname}"
+  else
+    read -p "  ${text}: " "${varname}"
+  fi
+
+  echo -ne "${BRIDGE_CDEFAULT}"
+}
+
+bridge::cli::confirm() {
+  local varname="${@: -1}"
+  local text="${*:1:$#-1}"
+  local result=false
+
+  # Create the variable to avoid warnings
+  printf -v "${varname}" "%s" ""
+
+  while ! [[ "${!varname}" =~ ^(y|n|yes|no)$ ]]; do
+    bridge::cli::read "${text} (y/n)" "${varname}"
+    printf -v "${varname}" "%s" "$(bridge::str::lower ${!varname})"
+  done
+
+  [[ "${!varname}" =~ ^(y|yes) ]] && result=true
+  printf -v "${varname}" "%s" "${result}"; echo
 }
 
 bridge::rc::append() {

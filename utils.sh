@@ -9,8 +9,20 @@
 set -euo pipefail
 
 create-bridge-app() {
-  # TODO: Improve this one
-  # Add exception to utils stuff
+  # TODO: Add exception to utils stuff
+
+  if [[ -e "${1}" ]]; then
+    bridge::cli::write "\"${1}\" is already exist..."
+    bridge::cli::confirm "Wanna override?" override
+
+    if "${override}"; then
+      rm -rf "${1}"
+    else
+      bridge::cli::write -s "Got you..."
+      return 0
+    fi
+  fi
+
   mkdir -p "${1}/"{"bridge_modules","src","data"}
 
   echo -e "#!/usr/bin/env ${BRIDGE_SHELL}\n" > "${1}/${1}.sh"
@@ -19,6 +31,8 @@ create-bridge-app() {
 
   cp -r "${BRIDGE_DIR}" "${1}/bridge_modules/bridgesh"
   cp "${BRIDGE_DIR}/templates/apploader.sh" "${1}/bridge_modules/init.sh"
+
+  bridge::cli::write -s "Done! \"${1}\" has been created."
 }
 
 bridgesh-upgrade() {
