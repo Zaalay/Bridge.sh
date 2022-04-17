@@ -55,15 +55,15 @@ BRIDGE_CBLUE="\033[1;34m"
 BRIDGE_CMAGENTA="\033[1;35m"
 BRIDGE_CCYAN="\033[1;36m"
 
-bridge::str::upper() {
+bridge.str.upper() {
   echo -e "${@:1}" | tr '[:lower:]' '[:upper:]'
 }
 
-bridge::str::lower() {
+bridge.str.lower() {
   echo -e "${@:1}" | tr '[:upper:]' '[:lower:]'
 }
 
-bridge::cli::write() {
+bridge.cli.write() {
   local color="${BRIDGE_CDEFAULT}"
   local text="${@:2}"
 
@@ -83,7 +83,7 @@ bridge::cli::write() {
   echo -e "  ${color}${text}${BRIDGE_CDEFAULT}"
 }
 
-bridge::cli::read() {
+bridge.cli.read() {
   local varname="${@: -1}"
   local text="${*:1:$#-1}"
 
@@ -98,7 +98,7 @@ bridge::cli::read() {
   echo -ne "${BRIDGE_CDEFAULT}"
 }
 
-bridge::cli::confirm() {
+bridge.cli.confirm() {
   local varname="${@: -1}"
   local text="${*:1:$#-1}"
   local result=false
@@ -107,15 +107,15 @@ bridge::cli::confirm() {
   printf -v "${varname}" "%s" ""
 
   while ! [[ "${!varname}" =~ ^(y|n|yes|no)$ ]]; do
-    bridge::cli::read "${text} (y/n)" "${varname}"
-    printf -v "${varname}" "%s" "$(bridge::str::lower ${!varname})"
+    bridge.cli.read "${text} (y/n)" "${varname}"
+    printf -v "${varname}" "%s" "$(bridge.str.lower ${!varname})"
   done
 
   [[ "${!varname}" =~ ^(y|yes) ]] && result=true
   printf -v "${varname}" "%s" "${result}"; echo
 }
 
-bridge::rc::append() {
+bridge.rc.append() {
   if [[ -f "${2}" ]]; then
     grep -q "${1}" "${2}" || echo -e "\n${1}" >> "${2}"
   else
@@ -123,20 +123,20 @@ bridge::rc::append() {
   fi
 }
 
-bridge::rc::takeaway() {
+bridge.rc.takeaway() {
   # echo is intended for inplace replace
   [[ -f "${2}" ]] && echo "$(grep -v "${1}" "${2}")" > "${2}"
 }
 
-bridge::rc::write() {
+bridge.rc.write() {
   echo -e "${1}" > "${2}"
 }
 
-bridge::path::decode() {
-  echo -e "$(echo "${1}" | sed 's/+/ /g;s/%\(..\)/\\x\1/g;')" | sed 's:/*$::'
+bridge.path.decode() {
+  echo -e "$(echo "${1}" | sed 's/+/ /g;s/%\(..\)/\\x\1/g;')" | sed 's:/*$.'
 }
 
-bridge::array::contain() {
+bridge.array.contain() {
   for item in ${@:2}; do
     [[ "${1}" == "${item}" ]] && return 0
   done
@@ -144,49 +144,49 @@ bridge::array::contain() {
   return 1
 }
 
-bridge::shbin::get_functions() {
+bridge.shbin.get_functions() {
   grep -v "grep" "${1}" | grep "() {" | sed 's/() {//'
 }
 
-bridge::shbin::link_functions() {
+bridge.shbin.link_functions() {
   (
     cd "${1}"
 
-    for bin in $(bridge::shbin::get_functions "${2}"); do
+    for bin in $(bridge.shbin.get_functions "${2}"); do
       ln -s "../${2}" "${3}/${bin}"
     done
   )
 }
 
-alias bridge::param::warn_value='{
-  bridge::cli::write -e "${1} needs value"
+alias bridge.param.warn_value='{
+  bridge.cli.write -e "${1} needs value"
   exit 1
 }'
 
-alias bridge::param::invalidate='{
-  bridge::cli::write -e "${1} is not a valid parameter"
+alias bridge.param.invalidate='{
+  bridge.cli.write -e "${1} is not a valid parameter"
   exit 1
 }'
 
-alias bridge::param::next='shift'
+alias bridge.param.next='shift'
 
-alias bridge::param::_get_value='{
+alias bridge.param._get_value_='{
   if [[ $# -ge 2 ]]; then
     if [[ "${2:1:1}" != "-" ]]; then
-      __bridgesh_lastvalue__="${2}"; bridge::param::next
+      __bridgesh_lastvalue__="${2}"; bridge.param.next
     else
-      bridge::param::warn_value
+      bridge.param.warn_value
     fi
   else
-    bridge::param::warn_value
+    bridge.param.warn_value
   fi
 }'
 
-bridge::web::get_items() {
+bridge.web.get_items() {
   curl -s "${1}" | grep href | sed 's/.*href="//' | sed 's/".*//'
 }
 
-bridge::web::scrap() {
+bridge.web.scrap() {
   local exclude=('')
   local src=""
   local dest="."
@@ -194,10 +194,10 @@ bridge::web::scrap() {
   while [[ $# -gt 0 ]]; do
     case "${1}" in
       --exclude)
-        bridge::param::_get_value
-        exclude+=("$(bridge::path::decode "${__bridgesh_lastvalue__}")") ;;
+        bridge.param._get_value_
+        exclude+=("$(bridge.path.decode "${__bridgesh_lastvalue__}")") ;;
       -*)
-        bridge::param::invalidate ;;
+        bridge.param.invalidate ;;
       *)
         if [[ "${src}" == "" ]]; then
           src="${1}"
@@ -206,26 +206,26 @@ bridge::web::scrap() {
         fi ;;
     esac
 
-    bridge::param::next
+    bridge.param.next
   done
 
   if [[ "${src}" == "" ]]; then
-    bridge::cli::write -e "No source?"; exit 1
+    bridge.cli.write -e "No source?"; exit 1
   fi
 
   mkdir -p "${dest}"
 
-  for item in $(bridge::web::get_items "${src}"); do
-    if (bridge::array::contain "$(bridge::path::decode "${item}")" \
+  for item in $(bridge.web.get_items "${src}"); do
+    if (bridge.array.contain "$(bridge.path.decode "${item}")" \
         "${exclude[@]}"); then
       continue
     fi
 
     # Space in "${item: -1}" is intented
     if [[ "${item: -1}" == "/" ]]; then
-      bridge::web::scrap "${src}/${item}" "${dest}/${item}"
+      bridge.web.scrap "${src}/${item}" "${dest}/${item}"
     else
-      curl -sS "${src}/${item}" -o "$(bridge::path::decode "${dest}/${item}")"
+      curl -sS "${src}/${item}" -o "$(bridge.path.decode "${dest}/${item}")"
     fi
   done
 }

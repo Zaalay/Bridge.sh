@@ -11,18 +11,18 @@ and boom! You got it installed! :D
 ## How to upgrade
 You can either run
 ```
-bridgesh-upgrade
+bridge-upgrade
 ```
 or
 ```
-bridgesh-update
+bridge-update
 ```
 Yeah, they're the same things
 
 ## How to uninstall
 Just run
 ```
-bridgesh-uninstall
+bridge-uninstall
 ```
 And... goodbye...
 

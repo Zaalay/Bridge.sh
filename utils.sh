@@ -8,17 +8,36 @@
 
 set -euo pipefail
 
+bridge() {
+  local cmd="bridge"
+  local wcmd=""
+  local params=("")
+
+  for menu in "${@:1}"; do
+    cmd+=".${menu}"
+
+    if command -v "${cmd}" &> /dev/null ; then
+      wcmd="${cmd}"
+      params=("")
+    else
+      params+=("${menu}")
+    fi
+  done
+
+  [[ -z "${wcmd}" || "${wcmd}" == "bridge" ]] || "${wcmd}" "${params[@]:1}"
+}
+
 create-bridge-app() {
   # TODO: Add exception to utils stuff
 
   if [[ -e "${1}" ]]; then
-    bridge::cli::write "\"${1}\" is already exist..."
-    bridge::cli::confirm "Wanna override?" override
+    bridge.cli.write "\"${1}\" is already exist..."
+    bridge.cli.confirm "Wanna override?" override
 
     if "${override}"; then
       rm -rf "${1}"
     else
-      bridge::cli::write -s "Got you..."
+      bridge.cli.write -s "Got you..."
       return 0
     fi
   fi
@@ -32,18 +51,18 @@ create-bridge-app() {
   cp -r "${BRIDGE_DIR}" "${1}/bridge_modules/bridgesh"
   cp "${BRIDGE_DIR}/templates/apploader.sh" "${1}/bridge_modules/init.sh"
 
-  bridge::cli::write -s "Done! \"${1}\" has been created."
+  bridge.cli.write -s "Done! \"${1}\" has been created."
 }
 
-bridgesh-upgrade() {
+bridge-upgrade() {
   curl -sSL https://github.com/Zaalay/Bridge.sh/raw/alpha/install.sh | bash
 }
 
-bridgesh-update() {
-  bridgesh-upgrade
+bridge-update() {
+  bridge-upgrade
 }
 
-bridgesh-uninstall() {
+bridge-uninstall() {
   "${BRIDGE_DIR}/uninstall.sh"
 }
 

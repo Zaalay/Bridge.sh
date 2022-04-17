@@ -74,13 +74,13 @@ bashzsh_rcfilestr='. "${HOME}/.bridgeshrc"'
 
 ###################### ALIASES ##############################
 
-alias rctakeaway='bridge::rc::takeaway'
-alias rcwrite='bridge::rc::write'
-alias rcappend='bridge::rc::append'
-alias webscrap='bridge::web::scrap'
-alias binlinks='bridge::shbin::link_functions'
-alias success='bridge::cli::write -s'
-alias attention='bridge::cli::write -a'
+alias rctakeaway='bridge.rc.takeaway'
+alias rcwrite='bridge.rc.write'
+alias rcappend='bridge.rc.append'
+alias webscrap='bridge.web.scrap'
+alias binlinks='bridge.shbin.link_functions'
+alias success='bridge.cli.write -s'
+alias attention='bridge.cli.write -a'
 
 ###################### INSTALATION ##############################
 
