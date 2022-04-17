@@ -24,11 +24,17 @@ bridge() {
     fi
   done
 
-  [[ -z "${wcmd}" || "${wcmd}" == "bridge" ]] || "${wcmd}" "${params[@]:1}"
+  if [[ -z "${wcmd}" || "${wcmd}" == "bridge" ]]; then
+    bridge.cli.write -e "Command not found:"
+    bridge.cli.write -i "${cmd}"; exit 1
+  else
+    "${wcmd}" "${params[@]:1}"
+  fi
 }
 
 create-bridge-app() {
-  # TODO: Add exception to utils stuff
+  local ignorelist=("uninstall.sh" "utils.sh" "templates")
+  ignorelist=($(paramexpand "--exclude" "${ignorelist[@]}"))
 
   if [[ -e "${1}" ]]; then
     bridge.cli.write "\"${1}\" is already exist..."

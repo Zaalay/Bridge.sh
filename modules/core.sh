@@ -63,6 +63,10 @@ bridge.str.lower() {
   echo -e "${@:1}" | tr '[:upper:]' '[:lower:]'
 }
 
+bridge.str.isremote() {
+  [[ "${1}" =~ ^(https?|ftp): ]]
+}
+
 bridge.cli.write() {
   local color="${BRIDGE_CDEFAULT}"
   local text="${@:2}"
@@ -132,16 +136,31 @@ bridge.rc.write() {
   echo -e "${1}" > "${2}"
 }
 
-bridge.path.decode() {
-  echo -e "$(echo "${1}" | sed 's/+/ /g;s/%\(..\)/\\x\1/g;')" | sed 's:/*$.'
+bridge.path.is_dir() {
+  [[ "${1: -1}" == "/" ]]
 }
 
-bridge.array.contain() {
+bridge.path.sdecode() {
+  echo "${1}" | sed 's|file:/\{0,2\}||' | sed 's:/*$::' | tr -s '/'
+}
+
+bridge.path.decode() {
+  # We need "echo -e" here to interpret special characters
+  echo -e "$(bridge.path.sdecode "${1}" | sed 's/+/ /g;s/%\(..\)/\\x\1/g;')"
+}
+
+bridge.list.contain() {
   for item in ${@:2}; do
     [[ "${1}" == "${item}" ]] && return 0
   done
 
   return 1
+}
+
+bridge.list.expand() {
+  for item in "${@:2}"; do
+    echo "${1}${item}"
+  done
 }
 
 bridge.shbin.get_functions() {
@@ -156,6 +175,12 @@ bridge.shbin.link_functions() {
       ln -s "../${2}" "${3}/${bin}"
     done
   )
+}
+
+bridge.param.expand() {
+  for item in "${@:2}"; do
+    echo "${1}" "${item}"
+  done
 }
 
 alias bridge.param.warn_value='{
@@ -186,21 +211,33 @@ bridge.web.get_items() {
   curl -s "${1}" | grep href | sed 's/.*href="//' | sed 's/".*//'
 }
 
-bridge.web.scrap() {
+# TODO
+# bridge.io.extract() {
+# curl -sSL "${src}" |
+#     tar -xz -C "${tmpdir}" --strip-components 1 ${ignorelist[@]}
+# }
+
+bridge.io.copy() {
   local exclude=('')
+  local items=('')
   local src=""
   local dest="."
+  local web=false
 
   while [[ $# -gt 0 ]]; do
     case "${1}" in
       --exclude)
         bridge.param._get_value_
-        exclude+=("$(bridge.path.decode "${__bridgesh_lastvalue__}")") ;;
+        exclude+=("$(bridge.path.sdecode "${__bridgesh_lastvalue__}")") ;;
       -*)
         bridge.param.invalidate ;;
       *)
         if [[ "${src}" == "" ]]; then
-          src="${1}"
+          if bridge.str.isremote "${1}"; then
+            web=true; src="${1}"
+          else
+            src="$(bridge.path.sdecode "${1}")"
+          fi
         elif [[ "${dest}" == "." ]]; then
           dest="${1}"
         fi ;;
@@ -215,17 +252,26 @@ bridge.web.scrap() {
 
   mkdir -p "${dest}"
 
-  for item in $(bridge.web.get_items "${src}"); do
-    if (bridge.array.contain "$(bridge.path.decode "${item}")" \
+  if "${web}"; then
+    items=($(bridge.web.get_items "${src}"))
+  else
+    items=($(ls -p "${src}"))
+  fi
+
+  for item in "${items[@]}"; do
+    if (bridge.list.contain "$(bridge.path.decode "${item}")" \
         "${exclude[@]}"); then
       continue
     fi
 
-    # Space in "${item: -1}" is intented
-    if [[ "${item: -1}" == "/" ]]; then
-      bridge.web.scrap "${src}/${item}" "${dest}/${item}"
+    if bridge.path.is_dir "${item}"; then
+      bridge.io.copy "${src}/${item}" "${dest}/${item}"
     else
-      curl -sS "${src}/${item}" -o "$(bridge.path.decode "${dest}/${item}")"
+      if "${web}"; then
+        curl -sS "${src}/${item}" -o "$(bridge.path.decode "${dest}/${item}")"
+      else
+        cp "${src}/${item}" "${dest}/${item}"
+      fi
     fi
   done
 }

@@ -77,7 +77,7 @@ bashzsh_rcfilestr='. "${HOME}/.bridgeshrc"'
 alias rctakeaway='bridge.rc.takeaway'
 alias rcwrite='bridge.rc.write'
 alias rcappend='bridge.rc.append'
-alias webscrap='bridge.web.scrap'
+alias copy='bridge.io.copy'
 alias binlinks='bridge.shbin.link_functions'
 alias success='bridge.cli.write -s'
 alias attention='bridge.cli.write -a'
@@ -123,14 +123,12 @@ else
     if [[ $# -ge 2 ]]; then
       src="${2}"
       source "${stdindir}" <<< "$(curl -sS "${src}/modules/core.sh")" "simple"
-
-      webscrap "${src}" ${ignorelist[@]} "${tmpdir}"
+      copy "${src}" ${ignorelist[@]} "${tmpdir}"
       chmod +x "${exelist[@]}"
     else
       src="$(dirname "${0}")"
       source "${src}/modules/core.sh" "simple"
-
-      (cd "${src}"; tar -c ${ignorelist[@]} . | tar -x -C "${tmpdir}")
+      copy "${src}" ${ignorelist[@]} "${tmpdir}"
     fi
   else
     src="https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha"
