@@ -8,33 +8,9 @@
 
 set -euo pipefail
 
-bridge() {
-  local cmd="bridge"
-  local wcmd=""
-  local params=("")
-
-  for menu in "${@:1}"; do
-    cmd+=".${menu}"
-
-    if command -v "${cmd}" &> /dev/null ; then
-      wcmd="${cmd}"
-      params=("")
-    else
-      params+=("${menu}")
-    fi
-  done
-
-  if [[ -z "${wcmd}" || "${wcmd}" == "bridge" ]]; then
-    bridge.cli.write -e "Command not found:"
-    bridge.cli.write -i "${cmd}"; exit 1
-  else
-    "${wcmd}" "${params[@]:1}"
-  fi
-}
-
 create-bridge-app() {
   local ignorelist=("uninstall.sh" "utils.sh" "templates")
-  ignorelist=($(paramexpand "--exclude" "${ignorelist[@]}"))
+  ignorelist=($(bridge.param.expand "--exclude" "${ignorelist[@]}"))
 
   if [[ -e "${1}" ]]; then
     bridge.cli.write "\"${1}\" is already exist..."
@@ -54,7 +30,8 @@ create-bridge-app() {
   cat "${BRIDGE_DIR}/templates/app.sh" >> "${1}/${1}.sh"
   chmod +x "${1}/${1}.sh"
 
-  cp -r "${BRIDGE_DIR}" "${1}/bridge_modules/bridgesh"
+  bridge.io.copy "${BRIDGE_DIR}" \
+    "${1}/bridge_modules/bridgesh" "${ignorelist[@]}"
   cp "${BRIDGE_DIR}/templates/apploader.sh" "${1}/bridge_modules/init.sh"
 
   bridge.cli.write -s "Done! \"${1}\" has been created."

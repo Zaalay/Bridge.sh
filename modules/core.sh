@@ -55,16 +55,31 @@ BRIDGE_CBLUE="\033[1;34m"
 BRIDGE_CMAGENTA="\033[1;35m"
 BRIDGE_CCYAN="\033[1;36m"
 
+bridge() {
+  local cmd=""
+  local params=('')
+
+  if [[ $# -ge 2 ]]; then
+    cmd="bridge.${1}.${2}"
+  elif [[ $# -ge 1 ]]; then
+    cmd="bridge.${1}"
+  else
+    bridge.cli.write -e "bridge: Insufficient parameter"; exit 1
+  fi
+
+  if command -v "${cmd}" &> /dev/null; then
+    if [[ $# -ge 3 ]]; then "${cmd}" "${@:3}"; else "${cmd}"; fi
+  else
+    bridge.cli.write -e "bridge: Command not found: ${cmd}"; exit 1
+  fi
+}
+
 bridge.str.upper() {
   echo -e "${@:1}" | tr '[:lower:]' '[:upper:]'
 }
 
 bridge.str.lower() {
   echo -e "${@:1}" | tr '[:upper:]' '[:lower:]'
-}
-
-bridge.str.isremote() {
-  [[ "${1}" =~ ^(https?|ftp): ]]
 }
 
 bridge.cli.write() {
@@ -140,12 +155,24 @@ bridge.path.is_dir() {
   [[ "${1: -1}" == "/" ]]
 }
 
+bridge.path.is_remote() {
+  [[ "${1}" =~ ^(https?|ftp): ]]
+}
+
 bridge.path.sdecode() {
   echo "${1}" | sed 's|file:/\{0,2\}||' | sed 's:/*$::' | tr -s '/'
 }
 
+bridge.path.adecode() {
+  if bridge.path.is_remote "${1}"; then
+    echo "${1}"
+  else
+    bridge.path.sdecode "${1}"
+  fi
+}
+
 bridge.path.decode() {
-  # We need "echo -e" here to interpret special characters
+  # We need "echo -e" here to interpret the resulting special characters
   echo -e "$(bridge.path.sdecode "${1}" | sed 's/+/ /g;s/%\(..\)/\\x\1/g;')"
 }
 
@@ -159,12 +186,12 @@ bridge.list.contain() {
 
 bridge.list.expand() {
   for item in "${@:2}"; do
-    echo "${1}${item}"
+    [[ -z "${item}" ]] || echo "${1}${item}"
   done
 }
 
 bridge.shbin.get_functions() {
-  grep -v "grep" "${1}" | grep "() {" | sed 's/() {//'
+  grep -v "#" "${1}" | grep -v "grep" | grep "() {" | sed 's/() {//'
 }
 
 bridge.shbin.link_functions() {
@@ -179,7 +206,7 @@ bridge.shbin.link_functions() {
 
 bridge.param.expand() {
   for item in "${@:2}"; do
-    echo "${1}" "${item}"
+    [[ -z "${item}" ]] || echo "${1}" "${item}"
   done
 }
 
@@ -207,73 +234,136 @@ alias bridge.param._get_value_='{
   fi
 }'
 
-bridge.web.get_items() {
-  curl -s "${1}" | grep href | sed 's/.*href="//' | sed 's/".*//'
+bridge.io.get_filetype() {
+  local mime=""
+
+  if bridge.path.is_remote "${1}"; then
+    mime="$(curl -sSIL "${1}" | grep -vi "x-content" |
+  grep -i "content-type" | tail -1)"
+else
+  mime="$(file --mime "${1}")"
+fi
+
+echo -e $(echo "${mime}" | rev | cut -d'/' -f1 | rev | cut -d';' -f1 |
+tr -d 'x-' | tr -d '[:space:]')
 }
 
-# TODO
-# bridge.io.extract() {
-# curl -sSL "${src}" |
-#     tar -xz -C "${tmpdir}" --strip-components 1 ${ignorelist[@]}
-# }
+bridge.io.get_items() {
+# TODO: support archives
+
+if bridge.path.is_remote "${1}"; then
+  curl -s "${1}" | grep href | sed 's/.*href="//' | sed 's/".*//'
+else
+  ls -p "${1}"
+fi
+}
+
+bridge.io.extract() {
+# TODO: support stdin
+local exclude=('')
+local shortexclude=('')
+local reader=('')
+local tarparams=('')
+local src=""
+local dest="."
+local type=""
+
+while [[ $# -gt 0 ]]; do
+  case "${1}" in
+    --exclude)
+      bridge.param._get_value_
+      exclude+=("$(bridge.path.sdecode "${__bridgesh_lastvalue__}")") ;;
+    -*)
+      bridge.param.invalidate ;;
+    *)
+      if [[ "${src}" == "" ]]; then
+        src="$(bridge.path.adecode "${1}")"
+      elif [[ "${dest}" == "." ]]; then
+        dest="${1}"
+      fi ;;
+  esac
+
+  bridge.param.next
+done
+
+if [[ "${src}" == "" ]]; then
+  bridge.cli.write -e "No source?"; exit 1
+elif bridge.path.is_remote "${src}"; then
+  reader=('curl' '-sSL' "${src}") #debug
+else
+  reader=('cat' "${src}")
+fi
+
+exclude=($(bridge.param.expand "--exclude" "${exclude[@]}"))
+shortexclude=($(bridge.param.expand "-x" "${exclude[@]}"))
+tarparams=('-xC' "${dest}" --strip-components 1 ${exclude[@]})
+type="$(bridge.io.get_filetype "${src}")"
+
+mkdir -p "${dest}"
+
+case "${type}" in
+  gzip)
+    "${reader[@]}" | tar -z "${tarparams[@]}" ;;
+  zip)
+    "${reader[@]}" | unzip "${shortexclude[@]}" -d "${dest}" ;;
+  bzip2)
+    "${reader[@]}" | tar -j "${tarparams[@]}" ;;
+  compress)
+    "${reader[@]}" | tar -Z "${tarparams[@]}" ;;
+  *)
+    bridge.cli.write -e "Unknown file type: ${type}"; exit 1 ;;
+esac
+}
+
+bridge.io.scopy() {
+if bridge.path.is_remote "${1}"; then
+  curl -sS "${1}" -o "$(bridge.path.decode "${2}")"
+else
+  cp "${1}" "${2}"
+fi
+}
 
 bridge.io.copy() {
-  local exclude=('')
-  local items=('')
-  local src=""
-  local dest="."
-  local web=false
+local exclude=('')
+local src=""
+local dest="."
 
-  while [[ $# -gt 0 ]]; do
-    case "${1}" in
-      --exclude)
-        bridge.param._get_value_
-        exclude+=("$(bridge.path.sdecode "${__bridgesh_lastvalue__}")") ;;
-      -*)
-        bridge.param.invalidate ;;
-      *)
-        if [[ "${src}" == "" ]]; then
-          if bridge.str.isremote "${1}"; then
-            web=true; src="${1}"
-          else
-            src="$(bridge.path.sdecode "${1}")"
-          fi
-        elif [[ "${dest}" == "." ]]; then
-          dest="${1}"
-        fi ;;
-    esac
+while [[ $# -gt 0 ]]; do
+  case "${1}" in
+    --exclude)
+      bridge.param._get_value_
+      exclude+=("$(bridge.path.sdecode "${__bridgesh_lastvalue__}")") ;;
+    -*)
+      bridge.param.invalidate ;;
+    *)
+      if [[ "${src}" == "" ]]; then
+        src="$(bridge.path.adecode "${1}")"
+      elif [[ "${dest}" == "." ]]; then
+        dest="${1}"
+      fi ;;
+  esac
 
-    bridge.param.next
-  done
+  bridge.param.next
+done
 
-  if [[ "${src}" == "" ]]; then
-    bridge.cli.write -e "No source?"; exit 1
+if [[ "${src}" == "" ]]; then
+  bridge.cli.write -e "No source?"; exit 1
+fi
+
+mkdir -p "${dest}"
+
+for item in $(bridge.io.get_items "${src}"); do
+  if (bridge.list.contain "$(bridge.path.decode "${item}")" \
+      "${exclude[@]}"); then
+    continue
   fi
 
-  mkdir -p "${dest}"
-
-  if "${web}"; then
-    items=($(bridge.web.get_items "${src}"))
+  if bridge.path.is_dir "${item}"; then
+    bridge.io.copy "${src}/${item}" "${dest}/${item}"
   else
-    items=($(ls -p "${src}"))
+    bridge.io.scopy "${src}/${item}" "${dest}/${item}"
   fi
-
-  for item in "${items[@]}"; do
-    if (bridge.list.contain "$(bridge.path.decode "${item}")" \
-        "${exclude[@]}"); then
-      continue
-    fi
-
-    if bridge.path.is_dir "${item}"; then
-      bridge.io.copy "${src}/${item}" "${dest}/${item}"
-    else
-      if "${web}"; then
-        curl -sS "${src}/${item}" -o "$(bridge.path.decode "${dest}/${item}")"
-      else
-        cp "${src}/${item}" "${dest}/${item}"
-      fi
-    fi
-  done
+done
 }
 
 if ! (return 0 2> /dev/null); then "${BRIDGE_SCRIPTNAME}" "${@:1}"; fi

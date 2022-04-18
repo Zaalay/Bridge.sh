@@ -26,13 +26,13 @@ error() {
 
 paramexpand() {
   for item in "${@:2}"; do
-    echo "${1}" "${item}"
+    [[ -z "${item}" ]] || echo "${1}" "${item}"
   done
 }
 
 listexpand() {
   for item in "${@:2}"; do
-    echo "${1}${item}"
+    [[ -z "${item}" ]] || echo "${1}${item}"
   done
 }
 
@@ -49,7 +49,7 @@ realuser="${SUDO_USER:-$(logname 2> /dev/null || echo "${USER}")}"
 
 bindir="$(dirname "$(type -P dirname)")"
 stdindir="/dev/stdin"
-[[ -e "/proc/self/fd/0" ]] && stdindir="/proc/self/fd/0"
+[[ -e "/proc/$$/fd/0" ]] && stdindir="/proc/$$/fd/0"
 realhomedir="$(eval echo ~"${realuser}")"
 # If can't get the real home dir, get the conventional $HOME instead
 [[ "${realhomedir}" == "~${realuser}" ]] && realhomedir="${HOME}"
@@ -78,6 +78,7 @@ alias rctakeaway='bridge.rc.takeaway'
 alias rcwrite='bridge.rc.write'
 alias rcappend='bridge.rc.append'
 alias copy='bridge.io.copy'
+alias extract='bridge.io.extract'
 alias binlinks='bridge.shbin.link_functions'
 alias success='bridge.cli.write -s'
 alias attention='bridge.cli.write -a'
@@ -134,9 +135,7 @@ else
     src="https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha"
     gitsrc="https://github.com/Zaalay/Bridge.sh/raw/alpha"
     source "${stdindir}" <<< "$(curl -sSL "${gitsrc}/modules/core.sh")" "simple"
-
-    curl -sSL "${src}" |
-    tar -xz -C "${tmpdir}" --strip-components 1 ${ignorelist[@]}
+    extract "${src}" ${ignorelist[@]} "${tmpdir}"
   fi
 
   [[ -f "${dir}/uninstall.sh" ]] && "${dir}/uninstall.sh" -u
