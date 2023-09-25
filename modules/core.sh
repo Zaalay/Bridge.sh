@@ -306,11 +306,8 @@ bridge.io.extract() {
       "${reader[@]}" | tar -z "${tarparams[@]}" ;;
     zip)
       # TODO: strip components
-<<<<<<< HEAD
-      unzip "${shortexclude[@]}" <("${reader[@]}") -d "${dest}"
-=======
-      unzip "${shortexclude[@]}" <("${reader[@]}") -d "${dest}" ;;
->>>>>>> dd3cd85 (update)
+      #unzip "${shortexclude[@]}" <("${reader[@]}") -d "${dest}" ;;
+      "${reader[@]}" | unzip "${shortexclude[@]}" -d "${dest}" ;;
     bzip2)
       "${reader[@]}" | tar -j "${tarparams[@]}" ;;
     compress)
