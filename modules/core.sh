@@ -212,12 +212,12 @@ bridge.param.expand() {
 
 alias bridge.param.warn_value='{
   bridge.cli.write -e "${1} needs value"
-  exit 1
+  return 1
 }'
 
 alias bridge.param.invalidate='{
   bridge.cli.write -e "${1} is not a valid parameter"
-  exit 1
+  return 1
 }'
 
 alias bridge.param.next='shift'
@@ -287,7 +287,7 @@ bridge.io.extract() {
   done
 
   if [[ "${src}" == "" ]]; then
-    bridge.cli.write -e "No source?"; exit 1
+    bridge.cli.write -e "No source?"; return 1
   elif bridge.path.is_remote "${src}"; then
     reader=('curl' '-sSL' "${src}")
   else
@@ -313,7 +313,7 @@ bridge.io.extract() {
     compress)
       "${reader[@]}" | tar -Z "${tarparams[@]}" ;;
     *)
-      bridge.cli.write -e "Unknown file type: ${type}"; exit 1 ;;
+      bridge.cli.write -e "Unknown file type: ${type}"; return 1 ;;
   esac
 }
 
@@ -349,7 +349,7 @@ bridge.io.copy() {
   done
 
   if [[ "${src}" == "" ]]; then
-    bridge.cli.write -e "No source?"; exit 1
+    bridge.cli.write -e "No source?"; return 1
   fi
 
   mkdir -p "${dest}"
