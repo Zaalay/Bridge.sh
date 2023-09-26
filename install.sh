@@ -132,7 +132,7 @@ else
       copy "${src}" ${ignorelist[@]} "${tmpdir}"
     fi
   else
-    src="https://api.github.com/repos/Zaalay/Bridge.sh/tarball/alpha"
+    src="https://github.com/Zaalay/Bridge.sh/archive/refs/heads/alpha.tar.gz"
     gitsrc="https://github.com/Zaalay/Bridge.sh/raw/alpha"
     source "${stdindir}" <<< "$(curl -sSL "${gitsrc}/modules/core.sh")" "simple"
     extract "${src}" ${ignorelist[@]} "${tmpdir}"
