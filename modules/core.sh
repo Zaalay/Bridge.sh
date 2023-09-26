@@ -64,13 +64,13 @@ bridge() {
   elif [[ $# -ge 1 ]]; then
     cmd="bridge.${1}"
   else
-    bridge.cli.write -e "bridge: Insufficient parameter"; exit 1
+    bridge.cli.write -e "bridge: Insufficient parameter"; return 1
   fi
 
   if command -v "${cmd}" &> /dev/null; then
     if [[ $# -ge 3 ]]; then "${cmd}" "${@:3}"; else "${cmd}"; fi
   else
-    bridge.cli.write -e "bridge: Command not found: ${cmd}"; exit 1
+    bridge.cli.write -e "bridge: Command not found: ${cmd}"; return 1
   fi
 }
 
