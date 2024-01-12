@@ -34,8 +34,7 @@ if [[ "${BRIDGE_LOADLV}" =~ ^(semifull|full|preloaded)$ ]]; then
   BRIDGE_SCRIPTNAME="$(basename ${0})"
   BRIDGE_USRBINDIR="${BRIDGE_DIR}/binaries"
 
-  # Don't use "source" as it also used for terminal inits
-  . "${BRIDGE_DIR}/modules/${BRIDGE_OS}.sh"
+  source "${BRIDGE_DIR}/modules/${BRIDGE_OS}.sh"
   export PATH="${BRIDGE_USRBINDIR}:${BRIDGE_USROSBINDIR}:${PATH}"
 fi
 

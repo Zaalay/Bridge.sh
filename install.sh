@@ -70,7 +70,7 @@ exelist=(
 exelist=($(listexpand "${tmpdir}/" "${exelist[@]}"))
 
 rcfilestr="export BRIDGE_BINDIR=${bindir}\nexport BRIDGE_OS=${os}"
-bashzsh_rcfilestr='. "${HOME}/.bridgeshrc"'
+bashzsh_rcfilestr='source "${HOME}/.bridgeshrc"'
 
 ###################### ALIASES ##############################
 

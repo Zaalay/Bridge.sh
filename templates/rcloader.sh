@@ -21,7 +21,7 @@ if [[ "${BRIDGE_SHELL}" == "zsh" ]]; then
   emulate -L ksh
 fi
 
-. "${BRIDGE_DIR}/modules/core.sh" "preloaded"
+source "${BRIDGE_DIR}/modules/core.sh" "preloaded"
 
 if [[ "${BRIDGE_SHELL}" == "zsh" ]]; then
   emulate ${BRIDGE_EMULATE}
