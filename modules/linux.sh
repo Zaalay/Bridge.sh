@@ -8,10 +8,7 @@ sed() {
   while [[ $# -gt 0 ]]; do
     case "${1}" in
       -i)
-        if [[ $# -ge 3 && ${2} == '-e' ]]; then
-          cmd+=('-i' "${3}")
-          shift 3
-        elif [[ $# -ge 4 && ${2} == '' && ${3} == '-e' ]]; then
+        if [[ $# -ge 4 && ${2} == '' && ${3} == '-e' ]]; then
           cmd+=('-i' "${4}")
           shift 4
         else
